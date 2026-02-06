@@ -39,6 +39,9 @@ class BrowserUseAgent(Agent):
                 return 'function_calling'
             elif self.chat_model_library == 'AzureChatOpenAI':
                 return 'function_calling'
+            # 支持 ZKH AI Gateway (ZKHChatOpenAI 继承自 ChatOpenAI)
+            elif self.chat_model_library == 'ZKHChatOpenAI':
+                return 'function_calling'
             else:
                 return None
         else:
