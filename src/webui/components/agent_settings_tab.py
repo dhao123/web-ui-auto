@@ -179,10 +179,10 @@ def create_agent_settings_tab(webui_manager: WebuiManager):
         max_steps = gr.Slider(
             minimum=1,
             maximum=1000,
-            value=100,
+            value=30,  # 默认30步，符合需求
             step=1,
             label="Max Run Steps",
-            info="Maximum number of steps the agent will take",
+            info="Maximum number of steps the agent will take (步数熔断阈值)",
             interactive=True
         )
         max_actions = gr.Slider(

@@ -19,6 +19,19 @@ We would like to officially thank [WarmShao](https://github.com/warmshao) for hi
 
 **Persistent Browser Sessions:** You can choose to keep the browser window open between AI tasks, allowing you to see the complete history and state of AI interactions.
 
+**Execution Monitoring & Observability (NEW 🎉):** 
+- **Step Limit Circuit Breaker**: Prevent infinite loops with configurable max steps (default 30)
+- **Retry Tracking**: Distinguish between system-level (network, timeout) and business-level (validation, async loading) retries
+- **Token Usage Statistics**: Real-time tracking of prompt tokens, completion tokens, and total cost
+- **Duration Metrics**: Monitor total execution time and average step duration
+- **Real-time Dashboard**: Live metrics display with modern card-based UI design
+
+**Modern UI Design (NEW 🎉):**
+- Light theme with gradient colors inspired by AI testing platforms
+- Real-time metrics dashboard showing execution status, steps, tokens, and retries
+- Card-based layout with smooth animations and modern styling
+- Bilingual interface (English/Chinese) for better accessibility
+
 <video src="https://github.com/user-attachments/assets/56bc7080-f2e3-4367-af22-6bf2245ff6cb" controls="controls">Your browser does not support playing this video!</video>
 
 ## Installation Guide
@@ -146,6 +159,11 @@ TARGETPLATFORM=linux/arm64 docker compose up --build
   - Can be changed by setting `VNC_PASSWORD` in your `.env` file
 
 ## Changelog
+- [x] **2026/02/09:** 🎉 **Major Update: Execution Engine Upgrade + UI Redesign**
+  - ✅ **Execution Monitor**: Step limit circuit breaker (default 30 steps), retry tracking (system/business), token usage statistics, duration metrics
+  - ✅ **Modern UI**: Light theme design inspired by AI testing platforms, real-time metrics dashboard, card-based layout with gradient colors
+  - ✅ **Observability**: Transparent, traceable, and quantifiable AI testing process
+  - 📖 [Full Documentation](docs/EXECUTION_MONITOR.md) | [Quick Start Guide](docs/QUICK_START_EXECUTION_MONITOR.md) | [Changelog](CHANGELOG_EXECUTION_MONITOR.md)
 - [x] **2025/01/26:** Thanks to @vvincent1234. Now browser-use-webui can combine with DeepSeek-r1 to engage in deep thinking!
 - [x] **2025/01/10:** Thanks to @casistack. Now we have Docker Setup option and also Support keep browser open between tasks.[Video tutorial demo](https://github.com/browser-use/web-ui/issues/1#issuecomment-2582511750).
 - [x] **2025/01/06:** Thanks to @richard-devbot. A New and Well-Designed WebUI is released. [Video tutorial demo](https://github.com/warmshao/browser-use-webui/issues/1#issuecomment-2573393113).

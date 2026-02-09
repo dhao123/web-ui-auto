@@ -18,6 +18,7 @@ from browser_use.browser.views import BrowserStateHistory
 from browser_use.utils import time_execution_async
 from dotenv import load_dotenv
 from browser_use.agent.message_manager.utils import is_model_without_tool_support
+from src.utils.execution_monitor import ExecutionMonitor, ExecutionStatus
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -28,6 +29,11 @@ SKIP_LLM_API_KEY_VERIFICATION = (
 
 
 class BrowserUseAgent(Agent):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # 初始化执行监控器
+        self.execution_monitor: ExecutionMonitor | None = None
+    
     def _set_tool_calling_method(self) -> ToolCallingMethod | None:
         tool_calling_method = self.settings.tool_calling_method
         if tool_calling_method == 'auto':
@@ -54,6 +60,12 @@ class BrowserUseAgent(Agent):
     ) -> AgentHistoryList:
         """Execute the task with maximum number of steps"""
 
+        # 初始化执行监控器
+        self.execution_monitor = ExecutionMonitor(
+            max_steps=max_steps,
+            task_id=getattr(self.state, 'agent_id', None)
+        )
+
         loop = asyncio.get_event_loop()
 
         # Set up the Ctrl+C signal handler with callbacks specific to this agent
@@ -77,6 +89,27 @@ class BrowserUseAgent(Agent):
                 self.state.last_result = result
 
             for step in range(max_steps):
+                # 检查步数熔断
+                if not self.execution_monitor.start_step(f"step_{step}"):
+                    error_message = f'Step limit exceeded: {step}/{max_steps}'
+                    self.state.history.history.append(
+                        AgentHistory(
+                            model_output=None,
+                            result=[ActionResult(error=error_message, include_in_memory=True)],
+                            state=BrowserStateHistory(
+                                url='',
+                                title='',
+                                tabs=[],
+                                interacted_element=[],
+                                screenshot=None,
+                            ),
+                            metadata=None,
+                        )
+                    )
+                    logger.error(f'❌ {error_message}')
+                    self.execution_monitor.finish(ExecutionStatus.STEP_LIMIT_EXCEEDED)
+                    break
+                
                 # Check if waiting for user input after Ctrl+C
                 if self.state.paused:
                     signal_handler.wait_for_resume()
@@ -85,11 +118,15 @@ class BrowserUseAgent(Agent):
                 # Check if we should stop due to too many failures
                 if self.state.consecutive_failures >= self.settings.max_failures:
                     logger.error(f'❌ Stopping due to {self.settings.max_failures} consecutive failures')
+                    self.execution_monitor.finish_step(success=False, error='Too many consecutive failures')
+                    self.execution_monitor.finish(ExecutionStatus.FAILED)
                     break
 
                 # Check control flags before each step
                 if self.state.stopped:
                     logger.info('Agent stopped')
+                    self.execution_monitor.finish_step(success=False, error='Agent stopped')
+                    self.execution_monitor.finish(ExecutionStatus.CANCELLED)
                     break
 
                 while self.state.paused:
@@ -101,7 +138,15 @@ class BrowserUseAgent(Agent):
                     await on_step_start(self)
 
                 step_info = AgentStepInfo(step_number=step, max_steps=max_steps)
-                await self.step(step_info)
+                
+                try:
+                    await self.step(step_info)
+                    self.execution_monitor.finish_step(success=True)
+                except Exception as e:
+                    logger.error(f"Step {step} failed: {e}")
+                    self.execution_monitor.finish_step(success=False, error=str(e))
+                    # 记录系统级重试
+                    self.execution_monitor.record_retry("system", str(e))
 
                 if on_step_end is not None:
                     await on_step_end(self)
@@ -109,9 +154,12 @@ class BrowserUseAgent(Agent):
                 if self.state.history.is_done():
                     if self.settings.validate_output and step < max_steps - 1:
                         if not await self._validate_output():
+                            # 记录业务级重试
+                            self.execution_monitor.record_retry("business", "Output validation failed")
                             continue
 
                     await self.log_completion()
+                    self.execution_monitor.finish(ExecutionStatus.SUCCESS)
                     break
             else:
                 error_message = 'Failed to complete task in maximum steps'
@@ -132,6 +180,7 @@ class BrowserUseAgent(Agent):
                 )
 
                 logger.info(f'❌ {error_message}')
+                self.execution_monitor.finish(ExecutionStatus.FAILED)
 
             return self.state.history
 

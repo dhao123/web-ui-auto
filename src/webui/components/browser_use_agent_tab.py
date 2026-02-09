@@ -147,6 +147,27 @@ async def _handle_new_step(
     step_num -= 1
     logger.info(f"Step {step_num} completed.")
 
+    # 记录Token使用（从agent的history中获取）
+    if hasattr(webui_manager, 'bu_agent') and webui_manager.bu_agent:
+        agent = webui_manager.bu_agent
+        if hasattr(agent, 'execution_monitor') and agent.execution_monitor:
+            # 从agent的history中获取最新步骤的metadata
+            if hasattr(agent.state, 'history') and agent.state.history.history:
+                latest_history = agent.state.history.history[-1]
+                if hasattr(latest_history, 'metadata') and latest_history.metadata:
+                    metadata = latest_history.metadata
+                    # metadata中包含input_tokens
+                    input_tokens = getattr(metadata, 'input_tokens', 0)
+                    if input_tokens > 0:
+                        # 假设completion_tokens约为input_tokens的1/3（这是一个估算）
+                        # 实际的completion_tokens可能需要从model_output中获取
+                        completion_tokens = input_tokens // 3
+                        agent.execution_monitor.record_tokens(
+                            prompt_tokens=input_tokens,
+                            completion_tokens=completion_tokens
+                        )
+                        logger.debug(f"Recorded tokens: prompt={input_tokens}, completion={completion_tokens}")
+
     # --- Screenshot Handling ---
     screenshot_html = ""
     # Ensure state.screenshot exists and is not empty before proceeding
@@ -202,19 +223,32 @@ def _handle_done(webui_manager: WebuiManager, history: AgentHistoryList):
     logger.info(
         f"Agent task finished. Duration: {history.total_duration_seconds():.2f}s, Tokens: {history.total_input_tokens()}"
     )
-    final_summary = "**Task Completed**\n"
-    final_summary += f"- Duration: {history.total_duration_seconds():.2f} seconds\n"
-    final_summary += f"- Total Input Tokens: {history.total_input_tokens()}\n"  # Or total tokens if available
+    
+    # 获取执行监控器的摘要
+    metrics_text = ""
+    if hasattr(webui_manager, 'bu_agent') and webui_manager.bu_agent:
+        agent = webui_manager.bu_agent
+        if hasattr(agent, 'execution_monitor') and agent.execution_monitor:
+            metrics_text = agent.execution_monitor.get_metrics_display()
+    
+    final_summary = "**✅ 任务完成**\n\n"
+    final_summary += f"**基础统计**:\n"
+    final_summary += f"- 总耗时: {history.total_duration_seconds():.2f} 秒\n"
+    final_summary += f"- 总输入Token: {history.total_input_tokens()}\n"
 
     final_result = history.final_result()
     if final_result:
-        final_summary += f"- Final Result: {final_result}\n"
+        final_summary += f"- 最终结果: {final_result}\n"
 
     errors = history.errors()
     if errors and any(errors):
-        final_summary += f"- **Errors:**\n```\n{errors}\n```\n"
+        final_summary += f"\n**⚠️ 错误信息:**\n```\n{errors}\n```\n"
     else:
-        final_summary += "- Status: Success\n"
+        final_summary += "- 状态: ✅ 成功\n"
+    
+    # 添加执行监控指标
+    if metrics_text:
+        final_summary += f"\n{metrics_text}"
 
     webui_manager.bu_chat_history.append(
         {"role": "assistant", "content": final_summary}
@@ -655,31 +689,73 @@ async def run_agent_task(
                     value=webui_manager.bu_chat_history
                 )
                 last_chat_len = len(webui_manager.bu_chat_history)
+            
+            # Update Metrics Display - 分别更新三个指标卡片
+            metrics_execution_comp = webui_manager.get_component_by_id("browser_use_agent.metrics_execution")
+            metrics_tokens_comp = webui_manager.get_component_by_id("browser_use_agent.metrics_tokens")
+            metrics_retries_comp = webui_manager.get_component_by_id("browser_use_agent.metrics_retries")
+            
+            if webui_manager.bu_agent and hasattr(webui_manager.bu_agent, 'execution_monitor'):
+                monitor = webui_manager.bu_agent.execution_monitor
+                if monitor:
+                    # 执行统计卡片
+                    execution_text = f"""
+**状态**: {monitor.status.value}
 
-            # Update Browser View
-            if headless and webui_manager.bu_browser_context:
+**执行统计**: 
+- 当前步数: {monitor.current_step} / {monitor.max_steps}
+- 总耗时: {monitor.get_total_duration():.2f}秒
+- 平均步骤耗时: {monitor.get_average_step_duration():.2f}秒
+"""
+                    update_dict[metrics_execution_comp] = gr.update(value=execution_text.strip())
+                    
+                    # Token消耗卡片
+                    tokens_text = f"""
+**Token消耗**: 
+- Prompt Tokens: {monitor.token_usage.prompt_tokens}
+- Completion Tokens: {monitor.token_usage.completion_tokens}
+- 总Token: {monitor.token_usage.total_tokens}
+"""
+                    update_dict[metrics_tokens_comp] = gr.update(value=tokens_text.strip())
+                    
+                    # 重试统计卡片
+                    retries_text = f"""
+**重试统计**: 
+- 系统级重试: {monitor.system_retry_count}
+- 业务级重试: {monitor.business_retry_count}
+- 总重试: {len(monitor.retry_records)}
+"""
+                    update_dict[metrics_retries_comp] = gr.update(value=retries_text.strip())
+
+            # Update Browser View - 始终显示
+            if webui_manager.bu_browser_context:
                 try:
                     screenshot_b64 = (
                         await webui_manager.bu_browser_context.take_screenshot()
                     )
                     if screenshot_b64:
-                        html_content = f'<img src="data:image/jpeg;base64,{screenshot_b64}" style="width:{stream_vw}vw; height:{stream_vh}vh ; border:1px solid #ccc;">'
+                        # 使用更大的尺寸显示浏览器视图
+                        html_content = f'<img src="data:image/jpeg;base64,{screenshot_b64}" style="width:100%; height:60vh; border:2px solid #e5e7eb; border-radius:12px; object-fit:contain; background:#fff;">'
                         update_dict[browser_view_comp] = gr.update(
                             value=html_content, visible=True
                         )
                     else:
-                        html_content = f"<h1 style='width:{stream_vw}vw; height:{stream_vh}vh'>Waiting for browser session...</h1>"
+                        html_content = "<div style='width:100%; height:60vh; display:flex; justify-content:center; align-items:center; border:2px solid #e5e7eb; border-radius:12px; background-color:#f9fafb;'><p style='color:#9ca3af; font-size:16px;'>正在等待浏览器响应...</p></div>"
                         update_dict[browser_view_comp] = gr.update(
                             value=html_content, visible=True
                         )
                 except Exception as e:
                     logger.debug(f"Failed to capture screenshot: {e}")
                     update_dict[browser_view_comp] = gr.update(
-                        value="<div style='...'>Error loading view...</div>",
+                        value="<div style='width:100%; height:60vh; display:flex; justify-content:center; align-items:center; border:2px solid #fca5a5; border-radius:12px; background-color:#fef2f2;'><p style='color:#dc2626; font-size:16px;'>截图加载失败</p></div>",
                         visible=True,
                     )
             else:
-                update_dict[browser_view_comp] = gr.update(visible=False)
+                # 浏览器未启动时的显示
+                update_dict[browser_view_comp] = gr.update(
+                    value="<div style='width:100%; height:60vh; display:flex; justify-content:center; align-items:center; border:2px solid #e5e7eb; border-radius:12px; background-color:#f9fafb;'><p style='color:#9ca3af; font-size:16px;'>等待任务启动...</p></div>",
+                    visible=True
+                )
 
             # Yield accumulated updates
             if update_dict:
@@ -977,42 +1053,91 @@ def create_browser_use_agent_tab(webui_manager: WebuiManager):
 
     # --- Define UI Components ---
     tab_components = {}
-    with gr.Column():
-        chatbot = gr.Chatbot(
-            lambda: webui_manager.bu_chat_history,  # Load history dynamically
-            elem_id="browser_use_chatbot",
-            label="Agent Interaction",
-            type="messages",
-            height=600,
-            show_copy_button=True,
-        )
-        user_input = gr.Textbox(
-            label="Your Task or Response",
-            placeholder="Enter your task here or provide assistance when asked.",
-            lines=3,
-            interactive=True,
-            elem_id="user_input",
-        )
-        with gr.Row():
-            stop_button = gr.Button(
-                "⏹️ Stop", interactive=False, variant="stop", scale=2
+    
+    # 顶部：横向显示执行指标（3个卡片）
+    with gr.Row():
+        with gr.Column(scale=1):
+            metrics_execution = gr.Markdown(
+                """
+                **状态**: 等待任务
+                
+                **执行统计**: 
+                - 当前步数: 0 / 0
+                - 总耗时: 0.00秒
+                - 平均步骤耗时: 0.00秒
+                """,
+                elem_classes=["metric-card"]
             )
-            pause_resume_button = gr.Button(
-                "⏸️ Pause", interactive=False, variant="secondary", scale=2, visible=True
+        with gr.Column(scale=1):
+            metrics_tokens = gr.Markdown(
+                """
+                **Token消耗**: 
+                - Prompt Tokens: 0
+                - Completion Tokens: 0
+                - 总Token: 0
+                """,
+                elem_classes=["metric-card"]
             )
-            clear_button = gr.Button(
-                "🗑️ Clear", interactive=True, variant="secondary", scale=2
+        with gr.Column(scale=1):
+            metrics_retries = gr.Markdown(
+                """
+                **重试统计**: 
+                - 系统级重试: 0
+                - 业务级重试: 0
+                - 总重试: 0
+                """,
+                elem_classes=["metric-card"]
             )
-            run_button = gr.Button("▶️ Submit Task", variant="primary", scale=3)
-
-        browser_view = gr.HTML(
-            value="<div style='width:100%; height:50vh; display:flex; justify-content:center; align-items:center; border:1px solid #ccc; background-color:#f0f0f0;'><p>Browser View (Requires Headless=True)</p></div>",
-            label="Browser Live View",
-            elem_id="browser_view",
-            visible=False,
+    
+    # 中间：输入框和按钮
+    user_input = gr.Textbox(
+        label="Your Task or Response",
+        placeholder="Enter your task here or provide assistance when asked.",
+        lines=3,
+        interactive=True,
+        elem_id="user_input",
+        elem_classes=["input-modern"],
+    )
+    with gr.Row():
+        stop_button = gr.Button(
+            "⏹️ Stop", interactive=False, variant="stop", scale=2
         )
+        pause_resume_button = gr.Button(
+            "⏸️ Pause", interactive=False, variant="secondary", scale=2, visible=True
+        )
+        clear_button = gr.Button(
+            "🗑️ Clear", interactive=True, variant="secondary", scale=2
+        )
+        run_button = gr.Button("▶️ Submit Task", variant="primary", scale=3, elem_classes=["btn-primary"])
+    
+    # 下方：左侧浏览器视图，右侧历史记录
+    with gr.Row():
+        # 左侧：浏览器实时视图
+        with gr.Column(scale=1):
+            gr.Markdown("### 🌐 浏览器实时视图", elem_classes=["metric-card"])
+            browser_view = gr.HTML(
+                value="<div style='width:100%; height:60vh; display:flex; justify-content:center; align-items:center; border:2px solid #e5e7eb; border-radius:12px; background-color:#f9fafb;'><p style='color:#9ca3af; font-size:16px;'>等待任务启动...</p></div>",
+                label="Browser Live View",
+                elem_id="browser_view",
+                visible=True,
+            )
+        
+        # 右侧：Agent交互历史
+        with gr.Column(scale=1):
+            gr.Markdown("### 📝 执行历史记录", elem_classes=["metric-card"])
+            chatbot = gr.Chatbot(
+                lambda: webui_manager.bu_chat_history,
+                elem_id="browser_use_chatbot",
+                label="Agent Interaction",
+                type="messages",
+                height=600,
+                show_copy_button=True,
+            )
+    
+    # 底部：输出文件
+    with gr.Row():
         with gr.Column():
-            gr.Markdown("### Task Outputs")
+            gr.Markdown("### 📁 Task Outputs")
             agent_history_file = gr.File(label="Agent History JSON", interactive=False)
             recording_gif = gr.Image(
                 label="Task Recording GIF",
@@ -1033,6 +1158,9 @@ def create_browser_use_agent_tab(webui_manager: WebuiManager):
             agent_history_file=agent_history_file,
             recording_gif=recording_gif,
             browser_view=browser_view,
+            metrics_execution=metrics_execution,
+            metrics_tokens=metrics_tokens,
+            metrics_retries=metrics_retries,
         )
     )
     webui_manager.add_components(

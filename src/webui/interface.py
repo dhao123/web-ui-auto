@@ -21,34 +21,207 @@ theme_map = {
 
 def create_ui(theme_name="Ocean"):
     css = """
+    /* 全局容器样式 - 参考AI测试者平台 */
     .gradio-container {
-        width: 70vw !important; 
-        max-width: 70% !important; 
+        width: 90vw !important; 
+        max-width: 90% !important; 
         margin-left: auto !important;
         margin-right: auto !important;
         padding-top: 10px !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     }
+    
+    /* 头部样式 */
     .header-text {
         text-align: center;
         margin-bottom: 20px;
+        color: white !important;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .tab-header-text {
-        text-align: center;
+    
+    .header-text h1 {
+        font-size: 2.5em !important;
+        font-weight: 700 !important;
+        margin-bottom: 10px !important;
     }
-    .theme-section {
-        margin-bottom: 10px;
-        padding: 15px;
-        border-radius: 10px;
+    
+    .header-text h3 {
+        font-size: 1.2em !important;
+        font-weight: 400 !important;
+        opacity: 0.9;
+    }
+    
+    /* Tab样式 - 浅色背景 */
+    .tab-nav {
+        background: rgba(255, 255, 255, 0.95) !important;
+        border-radius: 12px !important;
+        padding: 8px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    }
+    
+    .tab-nav button {
+        border-radius: 8px !important;
+        font-weight: 600 !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .tab-nav button.selected {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+    }
+    
+    /* 卡片样式 */
+    .metric-card {
+        background: white !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        margin-bottom: 16px !important;
+        border: 1px solid #e5e7eb !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .metric-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12) !important;
+        transform: translateY(-2px) !important;
+    }
+    
+    .metric-card h3 {
+        color: #667eea !important;
+        font-weight: 700 !important;
+        margin-bottom: 12px !important;
+    }
+    
+    .metric-card strong {
+        color: #667eea !important;
+        font-weight: 600 !important;
+    }
+    
+    .metric-card ul {
+        list-style: none !important;
+        padding-left: 0 !important;
+    }
+    
+    .metric-card li {
+        padding: 4px 0 !important;
+        color: #374151 !important;
+    }
+    
+    /* 指标卡片 - 不同颜色 */
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        color: white !important;
+        border-radius: 12px !important;
+        padding: 16px !important;
+        margin: 8px !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    }
+    
+    .stats-card-success {
+        background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%) !important;
+    }
+    
+    .stats-card-warning {
+        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%) !important;
+    }
+    
+    .stats-card-info {
+        background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%) !important;
+    }
+    
+    /* 按钮样式 */
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 12px 24px !important;
+        box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3) !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 12px rgba(102, 126, 234, 0.4) !important;
+    }
+    
+    /* 输入框样式 */
+    .input-modern {
+        border-radius: 8px !important;
+        border: 2px solid #e5e7eb !important;
+        padding: 12px !important;
+        transition: all 0.3s ease !important;
+        background: white !important;
+    }
+    
+    .input-modern:focus {
+        border-color: #667eea !important;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+    }
+    
+    /* Chatbot样式 */
+    #browser_use_chatbot {
+        border-radius: 12px !important;
+        border: 1px solid #e5e7eb !important;
+        background: white !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+    }
+    
+    /* Group样式 */
+    .gr-group {
+        background: rgba(255, 255, 255, 0.95) !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+        border: 1px solid #e5e7eb !important;
+        margin-bottom: 16px !important;
+    }
+    
+    /* Slider样式 */
+    .gr-slider input[type="range"] {
+        accent-color: #667eea !important;
+    }
+    
+    /* Dropdown样式 */
+    .gr-dropdown {
+        border-radius: 8px !important;
+        border: 2px solid #e5e7eb !important;
+    }
+    
+    /* 侧边栏样式 */
+    .sidebar {
+        background: rgba(255, 255, 255, 0.95) !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+    }
+    
+    /* 文件上传区域 */
+    .gr-file {
+        border-radius: 8px !important;
+        border: 2px dashed #e5e7eb !important;
+        background: white !important;
+    }
+    
+    /* Markdown内容样式 */
+    .markdown-text {
+        line-height: 1.6 !important;
+        color: #374151 !important;
+    }
+    
+    .markdown-text strong {
+        color: #667eea !important;
     }
     """
 
-    # dark mode in default
+    # 移除dark mode强制设置，使用浅色主题
     js_func = """
     function refresh() {
         const url = new URL(window.location);
-
-        if (url.searchParams.get('__theme') !== 'dark') {
-            url.searchParams.set('__theme', 'dark');
+        // 移除dark mode，使用light mode
+        if (url.searchParams.get('__theme') === 'dark') {
+            url.searchParams.delete('__theme');
             window.location.href = url.href;
         }
     }
@@ -62,8 +235,8 @@ def create_ui(theme_name="Ocean"):
         with gr.Row():
             gr.Markdown(
                 """
-                # 🌐 Browser Use WebUI
-                ### Control your browser with AI assistance
+                # 🌐 AI测试平台 - Browser Use WebUI
+                ### 智能浏览器自动化测试平台 | Control your browser with AI assistance
                 """,
                 elem_classes=["header-text"],
             )
