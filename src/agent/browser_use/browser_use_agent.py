@@ -37,16 +37,21 @@ class BrowserUseAgent(Agent):
     def _set_tool_calling_method(self) -> ToolCallingMethod | None:
         tool_calling_method = self.settings.tool_calling_method
         if tool_calling_method == 'auto':
+            # 获取真实的LLM类名（处理TokenTrackingLLM包装器）
+            llm_class_name = self.chat_model_library
+            if llm_class_name == 'TokenTrackingLLM' and hasattr(self.llm, 'wrapped_llm'):
+                llm_class_name = self.llm.wrapped_llm.__class__.__name__
+            
             if is_model_without_tool_support(self.model_name):
                 return 'raw'
-            elif self.chat_model_library == 'ChatGoogleGenerativeAI':
+            elif llm_class_name == 'ChatGoogleGenerativeAI':
                 return None
-            elif self.chat_model_library == 'ChatOpenAI':
+            elif llm_class_name == 'ChatOpenAI':
                 return 'function_calling'
-            elif self.chat_model_library == 'AzureChatOpenAI':
+            elif llm_class_name == 'AzureChatOpenAI':
                 return 'function_calling'
             # 支持 ZKH AI Gateway (ZKHChatOpenAI 继承自 ChatOpenAI)
-            elif self.chat_model_library == 'ZKHChatOpenAI':
+            elif llm_class_name == 'ZKHChatOpenAI':
                 return 'function_calling'
             else:
                 return None
@@ -144,6 +149,7 @@ class BrowserUseAgent(Agent):
                 
                 try:
                     await self.step(step_info)
+                    # Token使用情况现在由TokenTrackingLLM自动记录
                     self.execution_monitor.finish_step(success=True)
                 except Exception as e:
                     logger.error(f"Step {step} failed: {e}")

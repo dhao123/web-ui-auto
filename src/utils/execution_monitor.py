@@ -35,13 +35,16 @@ class TokenUsage:
     """Token使用统计"""
     prompt_tokens: int = 0
     completion_tokens: int = 0
-    total_tokens: int = 0
+    
+    @property
+    def total_tokens(self) -> int:
+        """计算总Token数"""
+        return self.prompt_tokens + self.completion_tokens
     
     def add(self, prompt: int = 0, completion: int = 0):
         """累加Token"""
         self.prompt_tokens += prompt
         self.completion_tokens += completion
-        self.total_tokens = self.prompt_tokens + self.completion_tokens
 
 
 @dataclass

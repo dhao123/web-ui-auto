@@ -22,6 +22,7 @@ from src.agent.browser_use.browser_use_agent import BrowserUseAgent
 from src.browser.custom_browser import CustomBrowser
 from src.controller.custom_controller import CustomController
 from src.utils import llm_provider
+from src.utils.token_tracking_llm import TokenTrackingLLM
 from src.webui.webui_manager import WebuiManager
 
 logger = logging.getLogger(__name__)
@@ -147,26 +148,7 @@ async def _handle_new_step(
     step_num -= 1
     logger.info(f"Step {step_num} completed.")
 
-    # 记录Token使用（从agent的history中获取）
-    if hasattr(webui_manager, 'bu_agent') and webui_manager.bu_agent:
-        agent = webui_manager.bu_agent
-        if hasattr(agent, 'execution_monitor') and agent.execution_monitor:
-            # 从agent的history中获取最新步骤的metadata
-            if hasattr(agent.state, 'history') and agent.state.history.history:
-                latest_history = agent.state.history.history[-1]
-                if hasattr(latest_history, 'metadata') and latest_history.metadata:
-                    metadata = latest_history.metadata
-                    # metadata中包含input_tokens
-                    input_tokens = getattr(metadata, 'input_tokens', 0)
-                    if input_tokens > 0:
-                        # 假设completion_tokens约为input_tokens的1/3（这是一个估算）
-                        # 实际的completion_tokens可能需要从model_output中获取
-                        completion_tokens = input_tokens // 3
-                        agent.execution_monitor.record_tokens(
-                            prompt_tokens=input_tokens,
-                            completion_tokens=completion_tokens
-                        )
-                        logger.debug(f"Recorded tokens: prompt={input_tokens}, completion={completion_tokens}")
+    # Token使用情况现在由TokenTrackingLLM自动记录，不需要在这里手动处理
 
     # --- Screenshot Handling ---
     screenshot_html = ""
@@ -445,7 +427,7 @@ async def run_agent_task(
         os.makedirs(save_download_path, exist_ok=True)
 
     # --- 2. Initialize LLM ---
-    main_llm = await _initialize_llm(
+    base_llm = await _initialize_llm(
         llm_provider_name,
         llm_model_name,
         llm_temperature,
@@ -453,6 +435,22 @@ async def run_agent_task(
         llm_api_key,
         ollama_num_ctx if llm_provider_name == "ollama" else None,
     )
+    
+    # 包装LLM以追踪token使用情况
+    # 定义token回调函数，用于实时更新ExecutionMonitor
+    def token_usage_callback(prompt_tokens: int, completion_tokens: int):
+        """Token使用回调函数"""
+        if hasattr(webui_manager, 'bu_agent') and webui_manager.bu_agent:
+            agent = webui_manager.bu_agent
+            if hasattr(agent, 'execution_monitor') and agent.execution_monitor:
+                agent.execution_monitor.record_tokens(
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens
+                )
+                logger.debug(f"Real-time token recorded: prompt={prompt_tokens}, completion={completion_tokens}")
+    
+    # 使用TokenTrackingLLM包装原始LLM
+    main_llm = TokenTrackingLLM(llm=base_llm, token_callback=token_usage_callback)
 
     # Pass the webui_manager instance to the callback when wrapping it
     async def ask_callback_wrapper(
