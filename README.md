@@ -162,6 +162,8 @@ TARGETPLATFORM=linux/arm64 docker compose up --build
 - [x] **2026/02/09:** 🎉 **Major Update: Execution Engine Upgrade + UI Redesign**
   - ✅ **Execution Monitor**: Step limit circuit breaker (default 30 steps), retry tracking (system/business), token usage statistics, duration metrics
   - ✅ **Modern UI**: Light theme design inspired by AI testing platforms, real-time metrics dashboard, card-based layout with gradient colors
+  - ✅ **UI Alignment**: Three metric cards with consistent height and perfect alignment
+  - ✅ **Headless Mode**: Browser runs in background by default, only visible in real-time view (no popup window)
   - ✅ **Observability**: Transparent, traceable, and quantifiable AI testing process
   - 📖 [Full Documentation](docs/EXECUTION_MONITOR.md) | [Quick Start Guide](docs/QUICK_START_EXECUTION_MONITOR.md) | [Changelog](CHANGELOG_EXECUTION_MONITOR.md)
 - [x] **2025/01/26:** Thanks to @vvincent1234. Now browser-use-webui can combine with DeepSeek-r1 to engage in deep thinking!

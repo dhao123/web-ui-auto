@@ -1116,7 +1116,7 @@ def create_browser_use_agent_tab(webui_manager: WebuiManager):
         with gr.Column(scale=1):
             gr.Markdown("### 🌐 浏览器实时视图", elem_classes=["metric-card"])
             browser_view = gr.HTML(
-                value="<div style='width:100%; height:60vh; display:flex; justify-content:center; align-items:center; border:2px solid #e5e7eb; border-radius:12px; background-color:#f9fafb;'><p style='color:#9ca3af; font-size:16px;'>等待任务启动...</p></div>",
+                value="<div style='width:100%; height:600px; display:flex; justify-content:center; align-items:center; border:2px solid #e5e7eb; border-radius:12px; background-color:#f9fafb;'><p style='color:#9ca3af; font-size:16px;'>等待任务启动...</p></div>",
                 label="Browser Live View",
                 elem_id="browser_view",
                 visible=True,

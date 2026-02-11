@@ -139,14 +139,26 @@ class BrowserUseAgent(Agent):
 
                 step_info = AgentStepInfo(step_number=step, max_steps=max_steps)
                 
+                # 记录步骤开始前的失败次数
+                failures_before = self.state.consecutive_failures
+                
                 try:
                     await self.step(step_info)
                     self.execution_monitor.finish_step(success=True)
                 except Exception as e:
                     logger.error(f"Step {step} failed: {e}")
                     self.execution_monitor.finish_step(success=False, error=str(e))
-                    # 记录系统级重试
-                    self.execution_monitor.record_retry("system", str(e))
+                    # 记录系统级重试（步骤失败但会继续）
+                    if step < max_steps - 1:
+                        self.execution_monitor.record_retry("system", f"Step exception: {str(e)}")
+
+                # 检查是否有新的失败（即使没有抛出异常）
+                failures_after = self.state.consecutive_failures
+                if failures_after > failures_before:
+                    # 失败次数增加，说明步骤执行有问题，记录为系统级重试
+                    if step < max_steps - 1:
+                        for i in range(failures_after - failures_before):
+                            self.execution_monitor.record_retry("system", f"Action execution failed (failure #{failures_after})")
 
                 if on_step_end is not None:
                     await on_step_end(self)
