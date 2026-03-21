@@ -235,7 +235,7 @@ def create_ui(theme_name="Ocean"):
         with gr.Row():
             gr.Markdown(
                 """
-                # 🌐 AI测试平台 - Browser Use WebUI
+                # 🌐 AI测试平台 - AI 用例执行
                 ### 智能浏览器自动化测试平台 | Control your browser with AI assistance
                 """,
                 elem_classes=["header-text"],
