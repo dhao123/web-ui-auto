@@ -37,16 +37,21 @@ class BrowserUseAgent(Agent):
     def _set_tool_calling_method(self) -> ToolCallingMethod | None:
         tool_calling_method = self.settings.tool_calling_method
         if tool_calling_method == 'auto':
+            # 获取真实的LLM类名（处理TokenTrackingLLM包装器）
+            llm_class_name = self.chat_model_library
+            if llm_class_name == 'TokenTrackingLLM' and hasattr(self.llm, 'wrapped_llm'):
+                llm_class_name = self.llm.wrapped_llm.__class__.__name__
+            
             if is_model_without_tool_support(self.model_name):
                 return 'raw'
-            elif self.chat_model_library == 'ChatGoogleGenerativeAI':
+            elif llm_class_name == 'ChatGoogleGenerativeAI':
                 return None
-            elif self.chat_model_library == 'ChatOpenAI':
+            elif llm_class_name == 'ChatOpenAI':
                 return 'function_calling'
-            elif self.chat_model_library == 'AzureChatOpenAI':
+            elif llm_class_name == 'AzureChatOpenAI':
                 return 'function_calling'
             # 支持 ZKH AI Gateway (ZKHChatOpenAI 继承自 ChatOpenAI)
-            elif self.chat_model_library == 'ZKHChatOpenAI':
+            elif llm_class_name == 'ZKHChatOpenAI':
                 return 'function_calling'
             else:
                 return None
@@ -139,14 +144,27 @@ class BrowserUseAgent(Agent):
 
                 step_info = AgentStepInfo(step_number=step, max_steps=max_steps)
                 
+                # 记录步骤开始前的失败次数
+                failures_before = self.state.consecutive_failures
+                
                 try:
                     await self.step(step_info)
+                    # Token使用情况现在由TokenTrackingLLM自动记录
                     self.execution_monitor.finish_step(success=True)
                 except Exception as e:
                     logger.error(f"Step {step} failed: {e}")
                     self.execution_monitor.finish_step(success=False, error=str(e))
-                    # 记录系统级重试
-                    self.execution_monitor.record_retry("system", str(e))
+                    # 记录系统级重试（步骤失败但会继续）
+                    if step < max_steps - 1:
+                        self.execution_monitor.record_retry("system", f"Step exception: {str(e)}")
+
+                # 检查是否有新的失败（即使没有抛出异常）
+                failures_after = self.state.consecutive_failures
+                if failures_after > failures_before:
+                    # 失败次数增加，说明步骤执行有问题，记录为系统级重试
+                    if step < max_steps - 1:
+                        for i in range(failures_after - failures_before):
+                            self.execution_monitor.record_retry("system", f"Action execution failed (failure #{failures_after})")
 
                 if on_step_end is not None:
                     await on_step_end(self)

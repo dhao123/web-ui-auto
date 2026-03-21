@@ -79,6 +79,11 @@ def create_ui(theme_name="Ocean"):
         margin-bottom: 16px !important;
         border: 1px solid #e5e7eb !important;
         transition: all 0.3s ease !important;
+        height: 180px !important;  /* 使用固定高度而不是min-height */
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: flex-start !important;
+        overflow: hidden !important;  /* 防止内容溢出 */
     }
     
     .metric-card:hover {
@@ -90,6 +95,8 @@ def create_ui(theme_name="Ocean"):
         color: #667eea !important;
         font-weight: 700 !important;
         margin-bottom: 12px !important;
+        font-size: 16px !important;  /* 减小标题字体 */
+        line-height: 1.2 !important;  /* 紧凑行高 */
     }
     
     .metric-card strong {
@@ -100,11 +107,23 @@ def create_ui(theme_name="Ocean"):
     .metric-card ul {
         list-style: none !important;
         padding-left: 0 !important;
+        margin: 0 !important;
     }
     
     .metric-card li {
         padding: 4px 0 !important;
         color: #374151 !important;
+        line-height: 1.6 !important;
+    }
+    
+    /* 确保Row中的Column高度一致 */
+    .gr-row {
+        align-items: stretch !important;
+    }
+    
+    .gr-column {
+        display: flex !important;
+        flex-direction: column !important;
     }
     
     /* 指标卡片 - 不同颜色 */
@@ -212,6 +231,18 @@ def create_ui(theme_name="Ocean"):
     
     .markdown-text strong {
         color: #667eea !important;
+    }
+    
+    /* 浏览器视图和历史记录的标题样式 - 更紧凑 */
+    .markdown-text h3 {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        margin: 0 0 8px 0 !important;  /* 减小底部间距 */
+        padding: 8px 12px !important;  /* 减小内边距 */
+        color: #667eea !important;
+        background: rgba(102, 126, 234, 0.05) !important;
+        border-radius: 8px !important;
+        line-height: 1.2 !important;
     }
     """
 
