@@ -1,0 +1,14 @@
+# MCP Browser Control Requirements
+# MCP 浏览器控制依赖
+
+# MCP SDK
+mcp>=1.0.0
+
+# 浏览器自动化
+playwright>=1.40.0
+
+# 异步支持
+asyncio
+
+# WebUI (可选,用于集成示例)
+gradio>=4.0.0

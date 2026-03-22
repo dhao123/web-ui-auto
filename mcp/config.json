@@ -1,0 +1,20 @@
+{
+  "mcpServers": {
+    "browser-control": {
+      "command": "python",
+      "args": ["mcp/server.py"],
+      "description": "MCP Browser Control Server - 提供浏览器自动化控制能力",
+      "env": {}
+    }
+  },
+  "mcpClients": {
+    "claude": {
+      "enabled": true,
+      "servers": ["browser-control"]
+    },
+    "cursor": {
+      "enabled": true,
+      "servers": ["browser-control"]
+    }
+  }
+}
