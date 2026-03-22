@@ -14,12 +14,13 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
     
     texts = {
         "zh": {
-            "title": "执行任务",
+            "title": "运行任务",
             "subtitle": "运行浏览器自动化任务",
             "metrics": {
                 "execution": "执行统计",
                 "tokens": "Token 消耗",
                 "retries": "重试统计",
+                "cost": "预估成本",
                 "status": "状态",
                 "current_step": "当前步数",
                 "max_steps": "最大步数",
@@ -32,9 +33,11 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                 "business_retries": "业务级重试",
                 "total_retries": "总重试",
                 "waiting": "等待任务",
+                "cost_desc": "基于 Token 估算",
             },
             "task_input": "📝 任务输入",
             "placeholder": "输入您的任务指令，例如：打开 Google 并搜索最新的人工智能新闻...",
+            "quick_tips": "💡 提示：按 Enter 快速提交任务",
             "submit": "▶ 提交任务",
             "stop": "⏹ 停止",
             "pause": "⏸ 暂停",
@@ -47,12 +50,13 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
             "recording": "录制 GIF",
         },
         "en": {
-            "title": "Run Agent",
+            "title": "Run Task",
             "subtitle": "Execute browser automation tasks",
             "metrics": {
                 "execution": "Execution Stats",
                 "tokens": "Token Usage",
                 "retries": "Retry Stats",
+                "cost": "Est. Cost",
                 "status": "Status",
                 "current_step": "Current Step",
                 "max_steps": "Max Steps",
@@ -65,9 +69,11 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                 "business_retries": "Business Retries",
                 "total_retries": "Total Retries",
                 "waiting": "Waiting",
+                "cost_desc": "Token-based estimate",
             },
             "task_input": "📝 Task Input",
             "placeholder": "Enter your task, e.g., Open Google and search for latest AI news...",
+            "quick_tips": "💡 Tip: Press Enter to submit quickly",
             "submit": "▶ Submit Task",
             "stop": "⏹ Stop",
             "pause": "⏸ Pause",
@@ -113,6 +119,17 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                 <div class="ep-stat-desc">0 / 0 tokens</div>
                 """)
             
+            # Cost Estimate Card (NEW)
+            with gr.Column(scale=1, elem_classes=["ep-stat-card", "success"]):
+                with gr.Row(elem_classes=["ep-stat-header"]):
+                    gr.Markdown(f"💰 **{t['metrics']['cost']}**")
+                    gr.Markdown("💵", elem_classes=["ep-stat-icon"])
+                metrics_cost = gr.Markdown(f"""
+                <div class="ep-stat-label">USD</div>
+                <div class="ep-stat-value">$0.00</div>
+                <div class="ep-stat-desc">{t['metrics']['cost_desc']}</div>
+                """)
+            
             # Retry Stats Card
             with gr.Column(scale=1, elem_classes=["ep-stat-card", "warning"]):
                 with gr.Row(elem_classes=["ep-stat-header"]):
@@ -136,7 +153,16 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                     lines=3,
                     elem_classes=["ep-input", "ep-textarea-lg"]
                 )
+                gr.Markdown(f"<span class='ep-text-xs ep-text-gray' style='margin-top: -0.5rem; display: block;'>{t['quick_tips']}</span>")
                 
+                # Primary Button - Full Width
+                run_button = gr.Button(
+                    t["submit"],
+                    variant="primary",
+                    elem_classes=["ep-btn", "ep-btn-primary", "ep-btn-lg"]
+                )
+                
+                # Secondary Actions Row
                 with gr.Row():
                     stop_button = gr.Button(
                         t["stop"],
@@ -152,11 +178,6 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                     clear_button = gr.Button(
                         t["clear"],
                         elem_classes=["ep-btn", "ep-btn-secondary"]
-                    )
-                    run_button = gr.Button(
-                        t["submit"],
-                        variant="primary",
-                        elem_classes=["ep-btn", "ep-btn-primary", "ep-btn-lg"]
                     )
         
         # ==================== Browser View & Logs ====================
@@ -181,7 +202,7 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                                 </div>
                                 <div class="ep-browser-content">
                                     <div style="text-align: center; color: #94a3b8;">
-                                        <div style="font-size: 48px; margin-bottom: 1rem;">🌐</div>
+                                        <div style="font-size: 32px; margin-bottom: 1rem;">🌐</div>
                                         <p>等待任务启动...</p>
                                     </div>
                                 </div>
@@ -237,6 +258,7 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
         "recording_gif": recording_gif,
         "metrics_execution": metrics_execution,
         "metrics_tokens": metrics_tokens,
+        "metrics_cost": metrics_cost,
         "metrics_retries": metrics_retries,
     })
     

@@ -210,6 +210,75 @@ def get_enterprise_css() -> str:
     }
     
     /* ==========================================
+       📍 Step Indicator
+       ========================================== */
+    
+    .ep-steps-container {
+        background: #ffffff !important;
+        padding: 1.5rem 2.5rem 0.5rem !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+    
+    .ep-steps {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .ep-step {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: var(--ep-radius-lg);
+        background: #f1f5f9;
+        color: #64748b;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all var(--ep-transition-base);
+    }
+    
+    .ep-step-active {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: #ffffff;
+        box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+    }
+    
+    .ep-step-number {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: 700;
+    }
+    
+    .ep-step-active .ep-step-number {
+        background: rgba(255, 255, 255, 0.3);
+    }
+    
+    .ep-step-arrow {
+        color: #cbd5e1;
+        font-size: 1.25rem;
+        font-weight: 300;
+    }
+    
+    @media (max-width: 768px) {
+        .ep-step-label {
+            display: none;
+        }
+        .ep-step {
+            padding: 0.5rem;
+        }
+    }
+    
+    /* ==========================================
        📑 Navigation Tabs
        ========================================== */
     
@@ -283,6 +352,38 @@ def get_enterprise_css() -> str:
     }
     
     /* ==========================================
+       📂 Accordion
+       ========================================== */
+    
+    .ep-accordion {
+        background: #ffffff;
+        border-radius: var(--ep-radius-lg);
+        border: 1px solid #e2e8f0;
+        box-shadow: var(--ep-shadow-sm);
+        overflow: hidden;
+    }
+    
+    .ep-accordion > .label-wrap {
+        padding: 1rem 1.25rem !important;
+        background: #f8fafc !important;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    
+    .ep-accordion > .label-wrap > span {
+        font-size: 0.9375rem !important;
+        font-weight: 600 !important;
+        color: #1e293b !important;
+    }
+    
+    .ep-accordion > .label-wrap > .icon {
+        color: #64748b !important;
+    }
+    
+    .ep-accordion > .content-wrap {
+        padding: 1.25rem !important;
+    }
+    
+    /* ==========================================
        📦 Content Container
        ========================================== */
     
@@ -318,11 +419,22 @@ def get_enterprise_css() -> str:
     }
     
     .ep-card-header {
-        padding: 1.25rem 1.5rem;
+        padding: 1rem 1.25rem;
         border-bottom: 1px solid #f1f5f9;
         display: flex;
         align-items: center;
         justify-content: space-between;
+    }
+    
+    .ep-card-header > .markdown {
+        margin: 0 !important;
+    }
+    
+    .ep-card-header > .markdown > p {
+        margin: 0 !important;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #1e293b;
     }
     
     .ep-card-title {
@@ -908,6 +1020,27 @@ def get_enterprise_css() -> str:
     
     .ep-hidden { display: none !important; }
     .ep-w-full { width: 100%; }
+    
+    /* ==========================================
+       📝 Config List
+       ========================================== */
+    
+    .ep-config-list {
+        background: #f8fafc;
+        border-radius: var(--ep-radius-md);
+        padding: 1rem;
+        font-size: 0.875rem;
+        line-height: 1.8;
+    }
+    
+    .ep-config-list p {
+        margin: 0;
+    }
+    
+    .ep-config-list strong {
+        color: #1e293b;
+        font-weight: 600;
+    }
     """
 
 
@@ -927,11 +1060,17 @@ def create_enterprise_ui(theme_mode: Literal["light", "dark", "auto"] = "auto", 
             "subtitle": "企业级智能浏览器自动化平台",
             "status": "系统运行正常",
             "tabs": {
-                "agent_settings": "⚙️ Agent配置",
-                "browser_settings": "🌐 浏览器配置", 
-                "run_agent": "🚀 执行任务",
+                "agent_settings": "🤖 模型配置",
+                "browser_settings": "🌐 环境配置", 
+                "run_agent": "▶️ 运行任务",
                 "deep_research": "🔬 深度研究",
                 "config": "💾 配置管理"
+            },
+            "steps": {
+                "step1": "配置模型",
+                "step2": "设置环境",
+                "step3": "运行任务",
+                "step4": "查看结果"
             }
         },
         "en": {
@@ -939,11 +1078,17 @@ def create_enterprise_ui(theme_mode: Literal["light", "dark", "auto"] = "auto", 
             "subtitle": "Enterprise-grade Intelligent Browser Automation Platform",
             "status": "System Operational",
             "tabs": {
-                "agent_settings": "⚙️ Agent Settings",
-                "browser_settings": "🌐 Browser Settings",
-                "run_agent": "🚀 Run Agent",
+                "agent_settings": "🤖 Model Config",
+                "browser_settings": "🌐 Environment",
+                "run_agent": "▶️ Run Task",
                 "deep_research": "🔬 Deep Research",
                 "config": "💾 Config"
+            },
+            "steps": {
+                "step1": "Config Model",
+                "step2": "Set Environment",
+                "step3": "Run Task",
+                "step4": "View Results"
             }
         }
     }
@@ -1000,6 +1145,33 @@ def create_enterprise_ui(theme_mode: Literal["light", "dark", "auto"] = "auto", 
                     <div class="ep-header-badge">{t["status"]}</div>
                 </div>
                 """, elem_classes=["ep-header-markdown"])
+        
+        # ==================== Step Indicator ====================
+        with gr.Row(elem_classes=["ep-steps-container"]):
+            with gr.Column(elem_classes=["ep-content"]):
+                gr.Markdown(f"""
+                <div class="ep-steps">
+                    <div class="ep-step ep-step-active">
+                        <div class="ep-step-number">1</div>
+                        <div class="ep-step-label">{t["steps"]["step1"]}</div>
+                    </div>
+                    <div class="ep-step-arrow">→</div>
+                    <div class="ep-step">
+                        <div class="ep-step-number">2</div>
+                        <div class="ep-step-label">{t["steps"]["step2"]}</div>
+                    </div>
+                    <div class="ep-step-arrow">→</div>
+                    <div class="ep-step">
+                        <div class="ep-step-number">3</div>
+                        <div class="ep-step-label">{t["steps"]["step3"]}</div>
+                    </div>
+                    <div class="ep-step-arrow">→</div>
+                    <div class="ep-step">
+                        <div class="ep-step-number">4</div>
+                        <div class="ep-step-label">{t["steps"]["step4"]}</div>
+                    </div>
+                </div>
+                """)
         
         # ==================== Navigation Tabs ====================
         with gr.Row(elem_classes=["ep-tabs-container"]):

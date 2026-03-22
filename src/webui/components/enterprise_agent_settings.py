@@ -17,10 +17,11 @@ def create_enterprise_agent_settings(ui_manager: WebuiManager, lang: Literal["zh
     
     texts = {
         "zh": {
-            "title": "Agent 配置",
+            "title": "模型配置",
             "subtitle": "配置大语言模型和执行参数",
-            "llm_config": "🤖 LLM 配置",
-            "planner_config": "📋 Planner LLM 配置",
+            "llm_config": "🤖 主 LLM 配置",
+            "planner_config": "📋 Planner LLM 配置（高级）",
+            "planner_hint": "用于任务规划的独立模型，不设置则使用主 LLM",
             "execution_config": "⚡ 执行配置",
             "mcp_config": "🔌 MCP 服务器配置",
             "prompt_config": "📝 提示词配置",
@@ -46,13 +47,14 @@ def create_enterprise_agent_settings(ui_manager: WebuiManager, lang: Literal["zh
             }
         },
         "en": {
-            "title": "Agent Settings",
+            "title": "Model Configuration",
             "subtitle": "Configure LLM and execution parameters",
-            "llm_config": "🤖 LLM Configuration",
-            "planner_config": "📋 Planner LLM Configuration",
-            "execution_config": "⚡ Execution Configuration",
-            "mcp_config": "🔌 MCP Server Configuration",
-            "prompt_config": "📝 Prompt Configuration",
+            "llm_config": "🤖 Main LLM Config",
+            "planner_config": "📋 Planner LLM Config (Advanced)",
+            "planner_hint": "Separate model for task planning, uses main LLM if not set",
+            "execution_config": "⚡ Execution Config",
+            "mcp_config": "🔌 MCP Server Config",
+            "prompt_config": "📝 Prompt Config",
             "provider": "Provider",
             "model": "Model Name",
             "temperature": "Temperature",
@@ -152,11 +154,9 @@ def create_enterprise_agent_settings(ui_manager: WebuiManager, lang: Literal["zh
                     elem_classes=["ep-slider"]
                 )
         
-        # ==================== Planner LLM Configuration Card ====================
-        with gr.Column(elem_classes=["ep-card", "ep-mb-4"]):
-            with gr.Row(elem_classes=["ep-card-header"]):
-                gr.Markdown(f"**{t['planner_config']}** (可选)")
-            
+        # ==================== Planner LLM Configuration (Collapsible) ====================
+        with gr.Accordion(t["planner_config"], open=False, elem_classes=["ep-accordion", "ep-mb-4"]):
+            gr.Markdown(f"<span class='ep-text-xs ep-text-gray ep-mb-2' style='display:block'>{t['planner_hint']}</span>")
             with gr.Column(elem_classes=["ep-card-body"]):
                 with gr.Row():
                     with gr.Column(scale=1):
