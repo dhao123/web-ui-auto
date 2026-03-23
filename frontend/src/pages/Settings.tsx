@@ -1,16 +1,17 @@
 /**
- * Settings - 配置页面
+ * Settings - 系统配置页面
+ * 专业级设计，无重叠问题
  */
-import { useState, useMemo } from 'react';
-import { Form, Input, InputNumber, Switch, Select, Button, Card, Tabs, message, Slider, Divider } from 'antd';
+import { useState, useMemo, useEffect } from 'react';
+import { Form, Input, InputNumber, Switch, Select, Button, Card, Tabs, message, Slider, Upload } from 'antd';
 import { Icon } from '@iconify/react';
-import type { AgentConfig, BrowserConfig } from '@/types/common';
+import type { AgentConfig, BrowserConfig, LLMConfig } from '@/types/common';
+import { useApp } from '@/context/AppContext';
+import { api } from '@/utils/api';
 
-// =============================================================================
-// Provider与模型名称配置 (与后端config.py保持一致)
-// =============================================================================
+const { TextArea } = Input;
 
-// LLM Provider选项（含ZKH）
+// Provider与模型名称配置
 const llmProviderOptions = [
   { label: 'ZKH AI Gateway', value: 'zkh' },
   { label: 'OpenAI', value: 'openai' },
@@ -23,33 +24,25 @@ const llmProviderOptions = [
   { label: 'Moonshot (月之暗面)', value: 'moonshot' },
 ];
 
-// 各Provider对应的模型名称列表 (参考 config.py)
 const modelNamesByProvider: Record<string, { label: string; value: string }[]> = {
   zkh: [
-    { label: 'GPT-4o (ep_20250805_urdq)', value: 'ep_20250805_urdq' },
-    { label: 'DeepSeek-V3 推荐 (ep_20251217_i18v)', value: 'ep_20251217_i18v' },
-    { label: 'GPT-4o-mini (ep_20250805_4q5l)', value: 'ep_20250805_4q5l' },
-    { label: '通义千问VL-Max 视觉 (ep_20250805_ur59)', value: 'ep_20250805_ur59' },
-    { label: '通义千问3-235B (ep_20250731_vzaa)', value: 'ep_20250731_vzaa' },
-    { label: '通义千问-Max (ep_20250728_izkl)', value: 'ep_20250728_izkl' },
-    { label: 'ZKH-LLM (ep_20250718_zoiz)', value: 'ep_20250718_zoiz' },
-    { label: 'Qwen-Long (ep_20250904_slsu)', value: 'ep_20250904_slsu' },
+    { label: 'GPT-4o', value: 'ep_20250805_urdq' },
+    { label: 'DeepSeek-V3', value: 'ep_20251217_i18v' },
+    { label: 'GPT-4o-mini', value: 'ep_20250805_4q5l' },
+    { label: '通义千问VL-Max', value: 'ep_20250805_ur59' },
   ],
   openai: [
     { label: 'GPT-4o', value: 'gpt-4o' },
     { label: 'GPT-4', value: 'gpt-4' },
     { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' },
-    { label: 'o3-mini', value: 'o3-mini' },
   ],
   anthropic: [
     { label: 'Claude 3.5 Sonnet', value: 'claude-3-5-sonnet-20241022' },
     { label: 'Claude 3 Opus', value: 'claude-3-opus-20240229' },
-    { label: 'Claude 3 Haiku', value: 'claude-3-haiku-20240307' },
   ],
   gemini: [
     { label: 'Gemini 2.0 Flash', value: 'gemini-2.0-flash' },
     { label: 'Gemini 1.5 Pro', value: 'gemini-1.5-pro' },
-    { label: 'Gemini 1.5 Flash', value: 'gemini-1.5-flash' },
   ],
   deepseek: [
     { label: 'DeepSeek Chat', value: 'deepseek-chat' },
@@ -57,37 +50,20 @@ const modelNamesByProvider: Record<string, { label: string; value: string }[]> =
   ],
   ollama: [
     { label: 'Qwen2.5 7B', value: 'qwen2.5:7b' },
-    { label: 'Qwen2.5 14B', value: 'qwen2.5:14b' },
-    { label: 'Qwen2.5 32B', value: 'qwen2.5:32b' },
-    { label: 'Qwen2.5-Coder 14B', value: 'qwen2.5-coder:14b' },
-    { label: 'Qwen2.5-Coder 32B', value: 'qwen2.5-coder:32b' },
-    { label: 'Llama2 7B', value: 'llama2:7b' },
     { label: 'DeepSeek-R1 14B', value: 'deepseek-r1:14b' },
-    { label: 'DeepSeek-R1 32B', value: 'deepseek-r1:32b' },
   ],
-};
-
-// =============================================================================
-// 其他配置选项
-// =============================================================================
-
-const defaultAgentConfig: AgentConfig = {
-  agentType: 'custom',
-  maxSteps: 100,
-  useVision: true,
-  maxActionsPerStep: 10,
-  toolCallInContent: true,
-  maxInputTokens: 128000,
-  toolCallingMethod: 'auto',
-};
-
-const defaultBrowserConfig: BrowserConfig = {
-  headless: false,
-  disableSecurity: true,
-  windowWidth: 1280,
-  windowHeight: 1100,
-  saveRecordingPath: './tmp/recordings',
-  saveTracePath: './tmp/traces',
+  azure_openai: [
+    { label: 'GPT-4o', value: 'gpt-4o' },
+    { label: 'GPT-4', value: 'gpt-4' },
+  ],
+  qwen: [
+    { label: 'Qwen-MAX', value: 'qwen-max' },
+    { label: 'Qwen-Plus', value: 'qwen-plus' },
+  ],
+  moonshot: [
+    { label: 'Moonshot-v1-8k', value: 'moonshot-v1-8k' },
+    { label: 'Moonshot-v1-32k', value: 'moonshot-v1-32k' },
+  ],
 };
 
 const agentTypeOptions = [
@@ -104,59 +80,87 @@ const toolCallingMethodOptions = [
   { label: 'Tools', value: 'tools' },
 ];
 
-// =============================================================================
-// Settings组件
-// =============================================================================
+// 配置卡片组件
+function ConfigCard({ 
+  title, 
+  icon, 
+  children,
+  extra,
+}: { 
+  title: string;
+  icon: string;
+  children: React.ReactNode;
+  extra?: React.ReactNode;
+}) {
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        padding: '16px 20px',
+        background: '#1c2333',
+        borderRadius: '12px 12px 0 0',
+        border: '1px solid #2d3748',
+        borderBottom: 'none'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ 
+            width: 36, height: 36, borderRadius: 8,
+            background: 'rgba(99, 102, 241, 0.15)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center'
+          }}>
+            <Icon icon={icon} style={{ color: '#818cf8', fontSize: 18 }} />
+          </div>
+          <span style={{ fontSize: 15, fontWeight: 600, color: '#ffffff' }}>{title}</span>
+        </div>
+        {extra}
+      </div>
+      <div style={{ 
+        padding: 24,
+        background: '#151b2b',
+        borderRadius: '0 0 12px 12px',
+        border: '1px solid #2d3748',
+        borderTop: 'none'
+      }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export function Settings() {
+  const { agentConfig, setAgentConfig, browserConfig, setBrowserConfig, llmConfig, setLLMConfig } = useApp();
   const [agentForm] = Form.useForm();
   const [browserForm] = Form.useForm();
   const [llmForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const [plannerEnabled, setPlannerEnabled] = useState(false);
+  const [plannerEnabled, setPlannerEnabled] = useState(llmConfig.plannerEnabled || false);
+  const [mainProvider, setMainProvider] = useState(llmConfig.provider || 'openai');
+  const [plannerProvider, setPlannerProvider] = useState(llmConfig.plannerProvider || 'openai');
+  const [activeTab, setActiveTab] = useState('agent');
 
-  // 主LLM的Provider选择状态
-  const [mainProvider, setMainProvider] = useState('openai');
-  // Planner LLM的Provider选择状态
-  const [plannerProvider, setPlannerProvider] = useState('openai');
+  const mainModelOptions = useMemo(() => modelNamesByProvider[mainProvider] || [], [mainProvider]);
+  const plannerModelOptions = useMemo(() => modelNamesByProvider[plannerProvider] || [], [plannerProvider]);
 
-  // 根据Provider动态获取模型列表
-  const mainModelOptions = useMemo(() => {
-    return modelNamesByProvider[mainProvider] || [];
-  }, [mainProvider]);
-
-  const plannerModelOptions = useMemo(() => {
-    return modelNamesByProvider[plannerProvider] || [];
-  }, [plannerProvider]);
-
-  // Provider切换时重置模型选择
-  const handleMainProviderChange = (value: string) => {
-    setMainProvider(value);
-    const models = modelNamesByProvider[value];
-    if (models && models.length > 0) {
-      llmForm.setFieldsValue({ modelName: models[0].value });
-    } else {
-      llmForm.setFieldsValue({ modelName: undefined });
-    }
-  };
-
-  const handlePlannerProviderChange = (value: string) => {
-    setPlannerProvider(value);
-    const models = modelNamesByProvider[value];
-    if (models && models.length > 0) {
-      llmForm.setFieldsValue({ plannerModelName: models[0].value });
-    } else {
-      llmForm.setFieldsValue({ plannerModelName: undefined });
-    }
-  };
+  useEffect(() => {
+    agentForm.setFieldsValue(agentConfig);
+    browserForm.setFieldsValue(browserConfig);
+    llmForm.setFieldsValue(llmConfig);
+  }, [agentConfig, browserConfig, llmConfig, agentForm, browserForm, llmForm]);
 
   const handleSaveAgent = async (values: AgentConfig) => {
     setLoading(true);
     try {
-      console.log('Agent config:', values);
-      message.success('Agent配置保存成功');
+      const res = await api.updateAgentConfig(values);
+      if (res.code === 0) {
+        setAgentConfig(values);
+        message.success('Agent配置保存成功');
+      } else {
+        message.error(res.message || '保存失败');
+      }
     } catch {
-      message.error('保存失败');
+      message.error('网络错误');
     } finally {
       setLoading(false);
     }
@@ -165,480 +169,259 @@ export function Settings() {
   const handleSaveBrowser = async (values: BrowserConfig) => {
     setLoading(true);
     try {
-      console.log('Browser config:', values);
-      message.success('Browser配置保存成功');
+      const res = await api.updateBrowserConfig(values);
+      if (res.code === 0) {
+        setBrowserConfig(values);
+        message.success('Browser配置保存成功');
+      } else {
+        message.error(res.message || '保存失败');
+      }
     } catch {
-      message.error('保存失败');
+      message.error('网络错误');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveLLM = async (values: Record<string, unknown>) => {
+  const handleSaveLLM = async (values: LLMConfig) => {
     setLoading(true);
     try {
-      console.log('LLM config:', values);
-      message.success('LLM配置保存成功');
+      const res = await api.updateLLMConfig(values);
+      if (res.code === 0) {
+        setLLMConfig(values);
+        message.success('LLM配置保存成功');
+      } else {
+        message.error(res.message || '保存失败');
+      }
     } catch {
-      message.error('保存失败');
+      message.error('网络错误');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleMainProviderChange = (value: string) => {
+    setMainProvider(value);
+    const models = modelNamesByProvider[value];
+    if (models?.length > 0) llmForm.setFieldsValue({ modelName: models[0].value });
+  };
+
+  const handlePlannerProviderChange = (value: string) => {
+    setPlannerProvider(value);
+    const models = modelNamesByProvider[value];
+    if (models?.length > 0) llmForm.setFieldsValue({ plannerModelName: models[0].value });
+  };
+
+  const handleMCPUpload = (info: any) => {
+    if (info.file.status === 'done') message.success(`${info.file.name} 上传成功`);
+    else if (info.file.status === 'error') message.error(`${info.file.name} 上传失败`);
   };
 
   const tabItems = [
     {
       key: 'agent',
-      label: (
-        <span className="flex items-center">
-          <Icon icon="mdi:robot" className="mr-2" />
-          Agent配置
-        </span>
-      ),
+      label: <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon icon="mdi:robot" />Agent配置</span>,
       children: (
-        <Card className="card-shadow">
-          <Form
-            form={agentForm}
-            layout="vertical"
-            initialValues={defaultAgentConfig}
-            onFinish={handleSaveAgent}
-          >
-            {/* 基础设置 */}
-            <div className="mb-4">
-              <h3 className="text-[14px] font-semibold text-[#333] mb-4 flex items-center">
-                <Icon icon="mdi:cog" className="mr-2 text-[#676BEF]" />
-                基础设置
-              </h3>
-              <div className="grid grid-cols-2 gap-6">
-                <Form.Item
-                  label="Agent类型"
-                  name="agentType"
-                  rules={[{ required: true, message: '请选择Agent类型' }]}
-                >
-                  <Select options={agentTypeOptions} placeholder="选择Agent类型" />
-                </Form.Item>
-
-                <Form.Item
-                  label="最大执行步数"
-                  name="maxSteps"
-                  rules={[{ required: true, message: '请输入最大步数' }]}
-                  tooltip="Agent执行任务的最大步数限制"
-                >
-                  <InputNumber min={1} max={1000} className="w-full" />
-                </Form.Item>
-
-                <Form.Item
-                  label="每步最大操作数"
-                  name="maxActionsPerStep"
-                  rules={[{ required: true }]}
-                  tooltip="每一步中允许执行的最大操作数量"
-                >
-                  <InputNumber min={1} max={50} className="w-full" />
-                </Form.Item>
-
-                <Form.Item
-                  label="Max Input Tokens"
-                  name="maxInputTokens"
-                  rules={[{ required: true, message: '请输入最大输入Token数' }]}
-                  tooltip="模型输入的最大Token数量限制"
-                >
-                  <InputNumber
-                    min={1024}
-                    max={1000000}
-                    step={1024}
-                    className="w-full"
-                    formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-                  />
-                </Form.Item>
-              </div>
-            </div>
-
-            <Divider className="my-6" />
-
-            {/* 高级设置 */}
-            <div className="mb-4">
-              <h3 className="text-[14px] font-semibold text-[#333] mb-4 flex items-center">
-                <Icon icon="mdi:tune" className="mr-2 text-[#676BEF]" />
-                高级设置
-              </h3>
-              <div className="grid grid-cols-2 gap-6">
-                <Form.Item
-                  label="Tool Calling Method"
-                  name="toolCallingMethod"
-                  rules={[{ required: true }]}
-                  tooltip="指定LLM调用工具的方式"
-                >
-                  <Select
-                    options={toolCallingMethodOptions}
-                    placeholder="选择Tool Calling方式"
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="启用视觉模式"
-                  name="useVision"
-                  valuePropName="checked"
-                  tooltip="启用后Agent可以理解页面截图"
-                >
-                  <Switch />
-                </Form.Item>
-
-                <Form.Item
-                  label="Tool Call in Content"
-                  name="toolCallInContent"
-                  valuePropName="checked"
-                  tooltip="将Tool Call内容包含在消息内容中"
-                >
-                  <Switch />
-                </Form.Item>
-              </div>
-            </div>
-
-            <Form.Item className="mb-0 mt-6">
-              <Button type="primary" htmlType="submit" loading={loading} className="w-[160px]">
-                保存配置
-              </Button>
+        <Form form={agentForm} layout="vertical" onFinish={handleSaveAgent} style={{ maxWidth: 900 }}>
+          <ConfigCard title="系统提示词" icon="mdi:message-text">
+            <Form.Item label="覆盖系统提示词" name="overrideSystemPrompt">
+              <TextArea rows={4} placeholder="输入自定义系统提示词..." />
             </Form.Item>
-          </Form>
-        </Card>
+            <Form.Item label="扩展系统提示词" name="extendSystemPrompt">
+              <TextArea rows={4} placeholder="输入要追加的系统提示词..." />
+            </Form.Item>
+          </ConfigCard>
+
+          <ConfigCard title="MCP服务器配置" icon="mdi:puzzle">
+            <Form.Item label="MCP配置文件">
+              <Upload accept=".json" action="/api/upload/mcp" onChange={handleMCPUpload} maxCount={1}>
+                <Button icon={<Icon icon="mdi:upload" />}>选择配置文件</Button>
+              </Upload>
+            </Form.Item>
+          </ConfigCard>
+
+          <ConfigCard title="基础设置" icon="mdi:cog">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+              <Form.Item label="Agent类型" name="agentType" rules={[{ required: true }]}>
+                <Select options={agentTypeOptions} placeholder="选择Agent类型" />
+              </Form.Item>
+              <Form.Item label="最大执行步数" name="maxSteps" rules={[{ required: true }]}>
+                <InputNumber min={1} max={1000} style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item label="每步最大操作数" name="maxActionsPerStep" rules={[{ required: true }]}>
+                <InputNumber min={1} max={50} style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item label="Max Input Tokens" name="maxInputTokens" rules={[{ required: true }]}>
+                <InputNumber min={1024} max={1000000} step={1024} style={{ width: '100%' }} formatter={(v) => `${v}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')} />
+              </Form.Item>
+            </div>
+          </ConfigCard>
+
+          <ConfigCard title="高级设置" icon="mdi:tune">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+              <Form.Item label="Tool Calling Method" name="toolCallingMethod" rules={[{ required: true }]}>
+                <Select options={toolCallingMethodOptions} placeholder="选择Tool Calling方式" />
+              </Form.Item>
+              <Form.Item label="启用视觉模式" name="useVision" valuePropName="checked">
+                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+              </Form.Item>
+              <Form.Item label="Tool Call in Content" name="toolCallInContent" valuePropName="checked">
+                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+              </Form.Item>
+            </div>
+          </ConfigCard>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} size="large" icon={<Icon icon="mdi:content-save" />}>
+              保存配置
+            </Button>
+          </Form.Item>
+        </Form>
       ),
     },
     {
       key: 'browser',
-      label: (
-        <span className="flex items-center">
-          <Icon icon="mdi:web" className="mr-2" />
-          Browser配置
-        </span>
-      ),
+      label: <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon icon="mdi:web" />Browser配置</span>,
       children: (
-        <Card className="card-shadow">
-          <Form
-            form={browserForm}
-            layout="vertical"
-            initialValues={defaultBrowserConfig}
-            onFinish={handleSaveBrowser}
-          >
-            {/* 窗口设置 */}
-            <div className="mb-4">
-              <h3 className="text-[14px] font-semibold text-[#333] mb-4 flex items-center">
-                <Icon icon="mdi:monitor" className="mr-2 text-[#676BEF]" />
-                窗口设置
-              </h3>
-              <div className="grid grid-cols-2 gap-6">
-                <Form.Item
-                  label="窗口宽度"
-                  name="windowWidth"
-                  rules={[{ required: true }]}
-                >
-                  <InputNumber min={800} max={2560} className="w-full" addonAfter="px" />
-                </Form.Item>
-
-                <Form.Item
-                  label="窗口高度"
-                  name="windowHeight"
-                  rules={[{ required: true }]}
-                >
-                  <InputNumber min={600} max={1440} className="w-full" addonAfter="px" />
-                </Form.Item>
-              </div>
+        <Form form={browserForm} layout="vertical" onFinish={handleSaveBrowser} style={{ maxWidth: 900 }}>
+          <ConfigCard title="浏览器路径" icon="mdi:folder">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+              <Form.Item label="浏览器可执行文件路径" name="browserBinaryPath">
+                <Input placeholder="例如: /Applications/Google Chrome.app/Contents/MacOS/Google Chrome" />
+              </Form.Item>
+              <Form.Item label="用户数据目录" name="browserUserDataDir">
+                <Input placeholder="例如: ./chrome_data" />
+              </Form.Item>
             </div>
+          </ConfigCard>
 
-            <Divider className="my-6" />
-
-            {/* 录制设置 */}
-            <div className="mb-4">
-              <h3 className="text-[14px] font-semibold text-[#333] mb-4 flex items-center">
-                <Icon icon="mdi:video" className="mr-2 text-[#676BEF]" />
-                录制设置
-              </h3>
-              <div className="grid grid-cols-2 gap-6">
-                <Form.Item
-                  label="录制保存路径"
-                  name="saveRecordingPath"
-                  tooltip="浏览器操作录制视频的保存路径"
-                >
-                  <Input placeholder="例如: ./tmp/recordings" />
-                </Form.Item>
-
-                <Form.Item
-                  label="Trace保存路径"
-                  name="saveTracePath"
-                  tooltip="Playwright Trace文件的保存路径"
-                >
-                  <Input placeholder="例如: ./tmp/traces" />
-                </Form.Item>
-              </div>
+          <ConfigCard title="窗口设置" icon="mdi:monitor">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+              <Form.Item label="窗口宽度" name="windowWidth" rules={[{ required: true }]}>
+                <InputNumber min={800} max={3840} style={{ width: '100%' }} addonAfter="px" />
+              </Form.Item>
+              <Form.Item label="窗口高度" name="windowHeight" rules={[{ required: true }]}>
+                <InputNumber min={600} max={2160} style={{ width: '100%' }} addonAfter="px" />
+              </Form.Item>
             </div>
+          </ConfigCard>
 
-            <Divider className="my-6" />
-
-            {/* 安全设置 */}
-            <div className="mb-4">
-              <h3 className="text-[14px] font-semibold text-[#333] mb-4 flex items-center">
-                <Icon icon="mdi:shield" className="mr-2 text-[#676BEF]" />
-                安全设置
-              </h3>
-              <div className="grid grid-cols-2 gap-6">
-                <Form.Item
-                  label="无头模式 (Headless)"
-                  name="headless"
-                  valuePropName="checked"
-                  tooltip="启用后浏览器将在后台运行，不显示界面"
-                >
-                  <Switch />
-                </Form.Item>
-
-                <Form.Item
-                  label="禁用安全限制"
-                  name="disableSecurity"
-                  valuePropName="checked"
-                  tooltip="禁用浏览器安全限制，用于测试环境"
-                >
-                  <Switch />
-                </Form.Item>
-              </div>
+          <ConfigCard title="录制与保存" icon="mdi:video">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+              <Form.Item label="录制保存路径" name="saveRecordingPath">
+                <Input placeholder="例如: ./tmp/recordings" />
+              </Form.Item>
+              <Form.Item label="Trace保存路径" name="saveTracePath">
+                <Input placeholder="例如: ./tmp/traces" />
+              </Form.Item>
             </div>
+          </ConfigCard>
 
-            <Form.Item className="mb-0 mt-6">
-              <Button type="primary" htmlType="submit" loading={loading} className="w-[160px]">
-                保存配置
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
+          <ConfigCard title="行为设置" icon="mdi:toggle-switch">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+              <Form.Item label="使用自有浏览器" name="useOwnBrowser" valuePropName="checked">
+                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+              </Form.Item>
+              <Form.Item label="保持浏览器打开" name="keepBrowserOpen" valuePropName="checked">
+                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+              </Form.Item>
+              <Form.Item label="无头模式 (Headless)" name="headless" valuePropName="checked">
+                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+              </Form.Item>
+              <Form.Item label="禁用安全限制" name="disableSecurity" valuePropName="checked">
+                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+              </Form.Item>
+            </div>
+          </ConfigCard>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} size="large" icon={<Icon icon="mdi:content-save" />}>
+              保存配置
+            </Button>
+          </Form.Item>
+        </Form>
       ),
     },
     {
       key: 'llm',
-      label: (
-        <span className="flex items-center">
-          <Icon icon="mdi:brain" className="mr-2" />
-          LLM配置
-        </span>
-      ),
+      label: <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icon icon="mdi:brain" />LLM配置</span>,
       children: (
-        <Card className="card-shadow">
-          <Form
-            form={llmForm}
-            layout="vertical"
-            initialValues={{
-              provider: 'openai',
-              modelName: 'gpt-4o',
-              temperature: 1.0,
-              baseUrl: '',
-              apiKey: '',
-              plannerEnabled: false,
-              plannerProvider: 'openai',
-              plannerModelName: 'gpt-4o-mini',
-              plannerTemperature: 0.7,
-              plannerBaseUrl: '',
-              plannerApiKey: '',
-            }}
-            onFinish={handleSaveLLM}
+        <Form form={llmForm} layout="vertical" onFinish={handleSaveLLM} style={{ maxWidth: 900 }}>
+          <ConfigCard title="主LLM配置" icon="mdi:robot-outline">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24 }}>
+              <Form.Item label="LLM Provider" name="provider" rules={[{ required: true }]}>
+                <Select options={llmProviderOptions} placeholder="选择LLM Provider" onChange={handleMainProviderChange} />
+              </Form.Item>
+              <Form.Item label="模型名称" name="modelName" rules={[{ required: true }]}>
+                <Select options={mainModelOptions} placeholder="选择模型" showSearch filterOption={(i, o) => (o?.label as string)?.toLowerCase().includes(i.toLowerCase()) ?? false} />
+              </Form.Item>
+              <Form.Item label="Base URL (可选)" name="baseUrl">
+                <Input placeholder="https://api.openai.com/v1" />
+              </Form.Item>
+              <Form.Item label="API Key" name="apiKey">
+                <Input.Password placeholder="sk-..." />
+              </Form.Item>
+              <Form.Item label="Temperature" name="temperature" style={{ gridColumn: 'span 2' }}>
+                <Slider min={0} max={2} step={0.1} marks={{ 0: <span style={{color: '#8b95a5'}}>精确</span>, 1: <span style={{color: '#8b95a5'}}>平衡</span>, 2: <span style={{color: '#8b95a5'}}>创意</span> }} />
+              </Form.Item>
+            </div>
+          </ConfigCard>
+
+          <ConfigCard 
+            title="Planner LLM配置" 
+            icon="mdi:head-lightbulb"
+            extra={
+              <Form.Item name="plannerEnabled" valuePropName="checked" style={{ margin: 0 }}>
+                <Switch checkedChildren="启用" unCheckedChildren="禁用" onChange={(c) => setPlannerEnabled(c)} />
+              </Form.Item>
+            }
           >
-            {/* 主LLM配置 */}
-            <div className="mb-4">
-              <h3 className="text-[14px] font-semibold text-[#333] mb-4 flex items-center">
-                <Icon icon="mdi:robot-outline" className="mr-2 text-[#676BEF]" />
-                主LLM配置
-              </h3>
-              <div className="grid grid-cols-2 gap-6">
-                <Form.Item
-                  label="LLM Provider"
-                  name="provider"
-                  rules={[{ required: true, message: '请选择Provider' }]}
-                >
-                  <Select
-                    options={llmProviderOptions}
-                    placeholder="选择LLM Provider"
-                    onChange={handleMainProviderChange}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="模型名称"
-                  name="modelName"
-                  rules={[{ required: true, message: '请选择模型' }]}
-                >
-                  <Select
-                    options={mainModelOptions}
-                    placeholder="选择模型"
-                    showSearch
-                    filterOption={(input, option) =>
-                      (option?.label as string)?.toLowerCase().includes(input.toLowerCase()) ?? false
-                    }
-                    notFoundContent={
-                      <span className="text-[#9297A9] text-[12px]">
-                        该Provider暂无预设模型，请手动输入
-                      </span>
-                    }
-                    {...(mainModelOptions.length === 0 ? { mode: undefined } : {})}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="Base URL (可选)"
-                  name="baseUrl"
-                  tooltip="自定义API端点，留空使用默认"
-                >
-                  <Input placeholder="https://api.openai.com/v1" />
-                </Form.Item>
-
-                <Form.Item
-                  label="API Key"
-                  name="apiKey"
-                  tooltip="留空则使用环境变量中的配置"
-                >
-                  <Input.Password placeholder="sk-..." />
-                </Form.Item>
-
-                <Form.Item
-                  label="Temperature"
-                  name="temperature"
-                  className="col-span-2"
-                  tooltip="控制输出的随机性，值越高越有创意"
-                >
-                  <Slider
-                    min={0}
-                    max={2}
-                    step={0.1}
-                    marks={{
-                      0: '精确',
-                      1: '平衡',
-                      2: '创意',
-                    }}
-                  />
-                </Form.Item>
-              </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 24, opacity: plannerEnabled ? 1 : 0.5 }}>
+              <Form.Item label="Planner Provider" name="plannerProvider">
+                <Select options={llmProviderOptions} placeholder="选择Planner Provider" disabled={!plannerEnabled} onChange={handlePlannerProviderChange} />
+              </Form.Item>
+              <Form.Item label="Planner 模型名称" name="plannerModelName">
+                <Select options={plannerModelOptions} placeholder="选择Planner模型" disabled={!plannerEnabled} showSearch />
+              </Form.Item>
+              <Form.Item label="Planner Base URL (可选)" name="plannerBaseUrl">
+                <Input placeholder="https://api.openai.com/v1" disabled={!plannerEnabled} />
+              </Form.Item>
+              <Form.Item label="Planner API Key" name="plannerApiKey">
+                <Input.Password placeholder="留空使用主LLM配置" disabled={!plannerEnabled} />
+              </Form.Item>
+              <Form.Item label="Planner Temperature" name="plannerTemperature" style={{ gridColumn: 'span 2' }}>
+                <Slider min={0} max={2} step={0.1} disabled={!plannerEnabled} marks={{ 0: <span style={{color: '#8b95a5'}}>精确</span>, 0.7: <span style={{color: '#8b95a5'}}>推荐</span>, 2: <span style={{color: '#8b95a5'}}>创意</span> }} />
+              </Form.Item>
             </div>
+          </ConfigCard>
 
-            <Divider className="my-6" />
-
-            {/* Planner LLM配置 */}
-            <div className="mb-4">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-[14px] font-semibold text-[#333] flex items-center">
-                  <Icon icon="mdi:head-lightbulb" className="mr-2 text-[#676BEF]" />
-                  Planner LLM配置
-                  <span className="ml-2 text-[12px] font-normal text-[#9297A9]">
-                    (用于任务规划和分解)
-                  </span>
-                </h3>
-                <Form.Item
-                  name="plannerEnabled"
-                  valuePropName="checked"
-                  className="mb-0"
-                >
-                  <Switch
-                    checkedChildren="启用"
-                    unCheckedChildren="禁用"
-                    onChange={(checked) => setPlannerEnabled(checked)}
-                  />
-                </Form.Item>
-              </div>
-
-              <div className={`grid grid-cols-2 gap-6 transition-opacity duration-300 ${plannerEnabled ? 'opacity-100' : 'opacity-50 pointer-events-none'}`}>
-                <Form.Item
-                  label="Planner Provider"
-                  name="plannerProvider"
-                >
-                  <Select
-                    options={llmProviderOptions}
-                    placeholder="选择Planner Provider"
-                    disabled={!plannerEnabled}
-                    onChange={handlePlannerProviderChange}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="Planner 模型名称"
-                  name="plannerModelName"
-                >
-                  <Select
-                    options={plannerModelOptions}
-                    placeholder="选择Planner模型"
-                    disabled={!plannerEnabled}
-                    showSearch
-                    filterOption={(input, option) =>
-                      (option?.label as string)?.toLowerCase().includes(input.toLowerCase()) ?? false
-                    }
-                    notFoundContent={
-                      <span className="text-[#9297A9] text-[12px]">
-                        该Provider暂无预设模型
-                      </span>
-                    }
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="Planner Base URL (可选)"
-                  name="plannerBaseUrl"
-                  tooltip="Planner模型的自定义API端点"
-                >
-                  <Input
-                    placeholder="https://api.openai.com/v1"
-                    disabled={!plannerEnabled}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="Planner API Key"
-                  name="plannerApiKey"
-                  tooltip="留空则使用主LLM的API Key"
-                >
-                  <Input.Password
-                    placeholder="留空使用主LLM配置"
-                    disabled={!plannerEnabled}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  label="Planner Temperature"
-                  name="plannerTemperature"
-                  className="col-span-2"
-                  tooltip="Planner模型的Temperature，建议使用较低值以获得更精确的规划"
-                >
-                  <Slider
-                    min={0}
-                    max={2}
-                    step={0.1}
-                    disabled={!plannerEnabled}
-                    marks={{
-                      0: '精确',
-                      0.7: '推荐',
-                      2: '创意',
-                    }}
-                  />
-                </Form.Item>
-              </div>
-            </div>
-
-            <Form.Item className="mb-0 mt-6">
-              <Button type="primary" htmlType="submit" loading={loading} className="w-[160px]">
-                保存配置
-              </Button>
-            </Form.Item>
-          </Form>
-        </Card>
+          <Form.Item>
+            <Button type="primary" htmlType="submit" loading={loading} size="large" icon={<Icon icon="mdi:content-save" />}>
+              保存配置
+            </Button>
+          </Form.Item>
+        </Form>
       ),
     },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* 页面标题 */}
-      <div className="flex items-center">
-        <Icon icon="mdi:cog" className="text-[24px] text-[#676BEF] mr-3" />
-        <h1 className="text-[20px] font-bold text-[#333]">系统配置</h1>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div className="page-header">
+        <div className="page-header-title">
+          <div className="page-header-icon">
+            <Icon icon="mdi:cog" />
+          </div>
+          <div className="page-header-text">
+            <h1>系统配置</h1>
+            <p>配置Agent、浏览器和LLM参数</p>
+          </div>
+        </div>
       </div>
 
-      {/* 配置选项卡 */}
-      <Tabs
-        defaultActiveKey="agent"
-        items={tabItems}
-        className="bg-white rounded-[8px] p-4"
-      />
+      <Card bodyStyle={{ padding: 24 }}>
+        <Tabs activeKey={activeTab} onChange={setActiveTab} items={tabItems} type="card" />
+      </Card>
     </div>
   );
 }

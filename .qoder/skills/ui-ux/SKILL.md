@@ -1,6 +1,6 @@
 # UI/UX For AI Developer Platform
 
-> **适用场景**：AI开发者平台的UI/UX设计与实现，提供统一的设计规范、组件使用指南和交互模式最佳实践
+> **适用场景**：AI测试者平台的UI/UX设计与实现，提供统一的设计规范、组件使用指南和交互模式最佳实践
 
 ---
 
@@ -1665,7 +1665,7 @@ const menuList = [
   mode="common"
   navProps={{ menuList }}
   headerProps={{ 
-    user: { username: 'user@example.com', nickname: '开发者' },
+    user: { username: 'user@example.com', nickname: '测试者' },
     isLogin: true 
   }}
 >
@@ -1708,7 +1708,7 @@ import Header from '@/components/Header';
 
 const user = {
   username: 'user@example.com',
-  nickname: '开发者',
+  nickname: '测试者',
   avatar: '/path/to/avatar.png'
 };
 

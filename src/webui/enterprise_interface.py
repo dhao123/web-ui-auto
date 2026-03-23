@@ -1056,8 +1056,8 @@ def create_enterprise_ui(theme_mode: Literal["light", "dark", "auto"] = "auto", 
     # 文本内容配置
     texts = {
         "zh": {
-            "title": "Browser Agent Enterprise",
-            "subtitle": "企业级智能浏览器自动化平台",
+            "title": "AI测试",
+            "subtitle": "AI用例执行",
             "status": "系统运行正常",
             "tabs": {
                 "agent_settings": "🤖 模型配置",
@@ -1074,8 +1074,8 @@ def create_enterprise_ui(theme_mode: Literal["light", "dark", "auto"] = "auto", 
             }
         },
         "en": {
-            "title": "Browser Agent Enterprise",
-            "subtitle": "Enterprise-grade Intelligent Browser Automation Platform",
+            "title": "AI Test",
+            "subtitle": "AI Test Execution",
             "status": "System Operational",
             "tabs": {
                 "agent_settings": "🤖 Model Config",

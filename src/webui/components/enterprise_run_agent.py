@@ -20,7 +20,6 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                 "execution": "执行统计",
                 "tokens": "Token 消耗",
                 "retries": "重试统计",
-                "cost": "预估成本",
                 "status": "状态",
                 "current_step": "当前步数",
                 "max_steps": "最大步数",
@@ -33,7 +32,6 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                 "business_retries": "业务级重试",
                 "total_retries": "总重试",
                 "waiting": "等待任务",
-                "cost_desc": "基于 Token 估算",
             },
             "task_input": "📝 任务输入",
             "placeholder": "输入您的任务指令，例如：打开 Google 并搜索最新的人工智能新闻...",
@@ -56,7 +54,6 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                 "execution": "Execution Stats",
                 "tokens": "Token Usage",
                 "retries": "Retry Stats",
-                "cost": "Est. Cost",
                 "status": "Status",
                 "current_step": "Current Step",
                 "max_steps": "Max Steps",
@@ -69,7 +66,6 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                 "business_retries": "Business Retries",
                 "total_retries": "Total Retries",
                 "waiting": "Waiting",
-                "cost_desc": "Token-based estimate",
             },
             "task_input": "📝 Task Input",
             "placeholder": "Enter your task, e.g., Open Google and search for latest AI news...",
@@ -117,17 +113,6 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
                 <div class="ep-stat-label">Total</div>
                 <div class="ep-stat-value">0</div>
                 <div class="ep-stat-desc">0 / 0 tokens</div>
-                """)
-            
-            # Cost Estimate Card (NEW)
-            with gr.Column(scale=1, elem_classes=["ep-stat-card", "success"]):
-                with gr.Row(elem_classes=["ep-stat-header"]):
-                    gr.Markdown(f"💰 **{t['metrics']['cost']}**")
-                    gr.Markdown("💵", elem_classes=["ep-stat-icon"])
-                metrics_cost = gr.Markdown(f"""
-                <div class="ep-stat-label">USD</div>
-                <div class="ep-stat-value">$0.00</div>
-                <div class="ep-stat-desc">{t['metrics']['cost_desc']}</div>
                 """)
             
             # Retry Stats Card
@@ -258,7 +243,6 @@ def create_enterprise_run_agent(ui_manager: WebuiManager, lang: Literal["zh", "e
         "recording_gif": recording_gif,
         "metrics_execution": metrics_execution,
         "metrics_tokens": metrics_tokens,
-        "metrics_cost": metrics_cost,
         "metrics_retries": metrics_retries,
     })
     

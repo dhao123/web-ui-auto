@@ -90,7 +90,7 @@ export interface HeaderProps {
  * 
  * <Header 
  *   mode="common"
- *   user={{ username: 'user@example.com', nickname: '开发者' }}
+ *   user={{ username: 'user@example.com', nickname: '测试者' }}
  *   isLogin={true}
  * />
  * ```

@@ -14,6 +14,7 @@ import uuid
 import asyncio
 import threading
 import time
+import base64
 
 app = FastAPI(title="AI Browser Automation API", version="1.0.0")
 
@@ -267,6 +268,61 @@ async def update_llm_config(config: LLMConfig):
 # Agent运行时状态存储
 _agent_runs: Dict[str, Dict[str, Any]] = {}
 
+def _generate_mock_screenshot(step: int, task: str) -> str:
+    """生成模拟浏览器截图（SVG格式转Base64）"""
+    try:
+        width, height = 800, 450
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # 创建SVG模拟浏览器窗口
+        svg_content = f'''<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" viewBox="0 0 {width} {height}">
+  <!-- 背景 -->
+  <rect width="{width}" height="{height}" fill="#1e293b"/>
+  
+  <!-- 浏览器标题栏 -->
+  <rect x="0" y="0" width="{width}" height="40" fill="#0f172a"/>
+  
+  <!-- 浏览器控制按钮 -->
+  <circle cx="20" cy="20" r="6" fill="#ef4444"/>
+  <circle cx="40" cy="20" r="6" fill="#f59e0b"/>
+  <circle cx="60" cy="20" r="6" fill="#22c55e"/>
+  
+  <!-- 地址栏 -->
+  <rect x="100" y="10" width="500" height="20" rx="4" fill="#334155"/>
+  <text x="110" y="24" font-family="Arial" font-size="12" fill="#94a3b8">https://example.com/task-{step}</text>
+  
+  <!-- 页面标题区域 -->
+  <rect x="40" y="60" width="{width-80}" height="80" rx="8" fill="#334155"/>
+  <text x="60" y="90" font-family="Arial" font-size="16" font-weight="bold" fill="#f8fafc">Step {step}: {task[:40]}...</text>
+  <text x="60" y="115" font-family="Arial" font-size="12" fill="#22c55e">● Agent executing...</text>
+  
+  <!-- 模拟内容块 -->
+  <rect x="40" y="160" width="{width-80}" height="40" rx="4" fill="#1e293b" stroke="#334155"/>
+  <text x="60" y="185" font-family="Arial" font-size="13" fill="#94a3b8">Content block 1 - Loading...</text>
+  
+  <rect x="40" y="210" width="{width-80}" height="40" rx="4" fill="#1e293b" stroke="#334155"/>
+  <text x="60" y="235" font-family="Arial" font-size="13" fill="#94a3b8">Content block 2 - Processing...</text>
+  
+  <rect x="40" y="260" width="{width-80}" height="40" rx="4" fill="#1e293b" stroke="#334155"/>
+  <text x="60" y="285" font-family="Arial" font-size="13" fill="#94a3b8">Content block 3 - Analyzing...</text>
+  
+  <rect x="40" y="310" width="{width-80}" height="40" rx="4" fill="#1e293b" stroke="#334155"/>
+  <text x="60" y="335" font-family="Arial" font-size="13" fill="#94a3b8">Content block 4 - Capturing...</text>
+  
+  <!-- 状态栏 -->
+  <rect x="0" y="{height-30}" width="{width}" height="30" fill="#0f172a"/>
+  <text x="20" y="{height-10}" font-family="Arial" font-size="12" fill="#22c55e">Step {step} | Agent executing...</text>
+  <text x="{width-150}" y="{height-10}" font-family="Arial" font-size="11" fill="#64748b">{timestamp}</text>
+</svg>'''
+        
+        # SVG转Base64
+        svg_bytes = svg_content.encode('utf-8')
+        svg_base64 = base64.b64encode(svg_bytes).decode('utf-8')
+        return svg_base64
+    except Exception as e:
+        print(f"Error generating screenshot: {e}")
+        return ""
+
 def _simulate_agent_execution(task_id: str, task: str):
     """模拟Agent执行过程（后台线程）"""
     run_state = _agent_runs.get(task_id)
@@ -341,6 +397,11 @@ def _simulate_agent_execution(task_id: str, task: str):
             "content": step_content,
             "timestamp": datetime.now().strftime("%H:%M:%S"),
         })
+        
+        # 生成并保存截图
+        screenshot = _generate_mock_screenshot(step, run_state.get("task", ""))
+        if screenshot:
+            run_state["screenshot"] = screenshot
 
         time.sleep(random.uniform(1.5, 3.0))
 

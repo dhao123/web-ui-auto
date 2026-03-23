@@ -36,8 +36,42 @@ class BrowserUseAgent(Agent):
     
     def _set_tool_calling_method(self) -> ToolCallingMethod | None:
         tool_calling_method = self.settings.tool_calling_method
+        
+        # 检测 LM Studio 本地模型（无论是否为 auto 模式，都强制处理）
+        is_lmstudio = False
+        lmstudio_indicators = []
+        
+        # 获取真实的LLM和base_url（处理TokenTrackingLLM包装器）
+        actual_llm = self.llm
+        if hasattr(self.llm, 'wrapped_llm') and self.llm.wrapped_llm is not None:
+            actual_llm = self.llm.wrapped_llm
+        
+        # 检测1: 通过 base_url
+        if hasattr(actual_llm, 'base_url') and actual_llm.base_url:
+            base_url = str(actual_llm.base_url)
+            if ':1234' in base_url:
+                is_lmstudio = True
+                lmstudio_indicators.append(f"base_url={base_url}")
+        
+        # 检测2: 通过模型名称 + 本地 endpoint
+        if not is_lmstudio and self.model_name:
+            local_models = ['qwen3.5', 'qwen2.5', 'llama-3.2', 'llama-3.1', 'phi-4', 'gemma-2']
+            if any(m in self.model_name.lower() for m in local_models):
+                if hasattr(actual_llm, 'base_url') and actual_llm.base_url:
+                    base_url = str(actual_llm.base_url)
+                    if 'localhost' in base_url or '127.0.0.1' in base_url or ':1234' in base_url:
+                        is_lmstudio = True
+                        lmstudio_indicators.append(f"model={self.model_name}, base_url={base_url}")
+        
+        # 如果是 LM Studio，强制使用 json_mode（禁用 function_calling）
+        if is_lmstudio:
+            logger.warning(f"🚨 LM Studio local model detected ({', '.join(lmstudio_indicators)}). "
+                          f"Forcing 'json_mode' instead of '{tool_calling_method}'. "
+                          f"Local models cannot use function_calling mode.")
+            return 'json_mode'
+        
+        # 非 LM Studio 模型，按原逻辑处理
         if tool_calling_method == 'auto':
-            # 获取真实的LLM类名（处理TokenTrackingLLM包装器）
             llm_class_name = self.chat_model_library
             if llm_class_name == 'TokenTrackingLLM' and hasattr(self.llm, 'wrapped_llm'):
                 llm_class_name = self.llm.wrapped_llm.__class__.__name__
@@ -50,7 +84,6 @@ class BrowserUseAgent(Agent):
                 return 'function_calling'
             elif llm_class_name == 'AzureChatOpenAI':
                 return 'function_calling'
-            # 支持 ZKH AI Gateway (ZKHChatOpenAI 继承自 ChatOpenAI)
             elif llm_class_name == 'ZKHChatOpenAI':
                 return 'function_calling'
             else:

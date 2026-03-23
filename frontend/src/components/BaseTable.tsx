@@ -1,53 +1,32 @@
 /**
- * BaseTable - 统一表格组件
+ * BaseTable - 基础表格组件
+ * 科技感表格样式
  */
-import { Table, Spin } from 'antd';
-import type { TableProps } from 'antd';
-import { Icon } from '@iconify/react';
+import { Table } from 'antd';
+import type { TableProps } from 'antd/es/table';
 
-export interface BaseTableProps<T> extends TableProps<T> {
-  xScroll?: string | number;
+interface BaseTableProps<T> extends TableProps<T> {
+  className?: string;
 }
 
-// 自定义加载指示器
-const spinIndicator = (
-  <Icon icon="eos-icons:loading" className="text-[24px] text-[#676BEF] animate-spin" />
-);
-
-export function BaseTable<T extends object>({
-  columns,
-  loading,
-  pagination,
-  xScroll = 'max-content',
-  ...props
+export function BaseTable<T extends object>({ 
+  className = '',
+  ...props 
 }: BaseTableProps<T>) {
-  // 处理列配置
-  const processedColumns = columns?.map((col) => ({
-    ...col,
-    align: col.align || 'center' as const,
-    ellipsis: col.ellipsis !== false,
-  }));
-
-  // 处理分页配置
-  const processedPagination = pagination === false ? false : {
-    showQuickJumper: true,
-    showSizeChanger: true,
-    showTotal: (total: number) => `共 ${total} 条`,
-    ...pagination,
-  };
-
   return (
-    <Spin spinning={!!loading} indicator={spinIndicator}>
-      <Table
-        columns={processedColumns}
-        pagination={processedPagination}
-        scroll={{ x: xScroll }}
-        size="large"
-        bordered={false}
-        {...props}
-      />
-    </Spin>
+    <Table
+      {...props}
+      className={`base-table ${className}`}
+      pagination={
+        props.pagination === false
+          ? false
+          : {
+              showSizeChanger: true,
+              showQuickJumper: true,
+              showTotal: (total) => `共 ${total} 条`,
+              ...props.pagination,
+            }
+      }
+    />
   );
 }
-
-export default BaseTable;

@@ -83,7 +83,7 @@ export interface PageHeaderBannerProps {
 }
 
 /**
- * 开发者用户类型
+ * 测试者用户类型
  */
 export interface DevUser {
   nickname?: string;

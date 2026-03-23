@@ -203,13 +203,14 @@ def get_llm_model(provider: str, **kwargs):
     - openai: OpenAI
     - deepseek: DeepSeek
     - ollama: Ollama 本地模型
+    - lmstudio: LM Studio 本地模型 (OpenAI 兼容 API)
     
     :param provider: LLM 供应商名称
     :param kwargs: 模型配置参数
     :return: LLM 模型实例
     """
-    # Ollama 不需要 API Key
-    if provider != "ollama":
+    # Ollama 和 LM Studio 不需要 API Key (LM Studio 支持空 API key)
+    if provider not in ("ollama", "lmstudio"):
         env_var = f"{provider.upper()}_API_KEY"
         api_key = kwargs.get("api_key", "") or os.getenv(env_var, "")
         if not api_key:
@@ -282,5 +283,19 @@ def get_llm_model(provider: str, **kwargs):
                 base_url=base_url,
             )
     
+    # ==================== LM Studio (本地模型 - OpenAI 兼容 API) ====================
+    elif provider == "lmstudio":
+        # LM Studio 默认端口是 1234，用户可配置 base_url
+        base_url = kwargs.get("base_url") or os.getenv("LMSTUDIO_ENDPOINT", "http://localhost:1234/v1")
+        # LM Studio 支持空 API key，如果未提供则使用空字符串
+        api_key = kwargs.get("api_key", "") or os.getenv("LMSTUDIO_API_KEY", "")
+        
+        return ChatOpenAI(
+            model=kwargs.get("model_name", "qwen3.5-9b"),
+            temperature=kwargs.get("temperature", 0.0),
+            base_url=base_url,
+            api_key=api_key if api_key else "not-needed",  # LM Studio 接受任意 API key 或 "not-needed"
+        )
+    
     else:
-        raise ValueError(f"Unsupported provider: {provider}. Supported providers: zkh, openai, deepseek, ollama")
+        raise ValueError(f"Unsupported provider: {provider}. Supported providers: zkh, openai, deepseek, ollama, lmstudio")

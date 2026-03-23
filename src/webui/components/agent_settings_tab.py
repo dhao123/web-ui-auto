@@ -108,14 +108,14 @@ def create_agent_settings_tab(webui_manager: WebuiManager):
         with gr.Row():
             llm_base_url = gr.Textbox(
                 label="Base URL",
-                value="",
-                info="API endpoint URL (if required)"
+                value=os.getenv("ZKH_ENDPOINT", "https://ai-dev-gateway.zkh360.com/llm/v1"),
+                info="API endpoint URL (已从后台配置加载默认值)"
             )
             llm_api_key = gr.Textbox(
                 label="API Key",
                 type="password",
-                value="",
-                info="Your API key (leave blank to use .env)"
+                value=os.getenv("ZKH_API_KEY", ""),
+                info="Your API key (已从后台配置加载默认值)"
             )
 
     with gr.Group():
@@ -165,14 +165,14 @@ def create_agent_settings_tab(webui_manager: WebuiManager):
         with gr.Row():
             planner_llm_base_url = gr.Textbox(
                 label="Base URL",
-                value="",
-                info="API endpoint URL (if required)"
+                value=os.getenv("ZKH_ENDPOINT", "https://ai-dev-gateway.zkh360.com/llm/v1"),
+                info="API endpoint URL (已从后台配置加载默认值)"
             )
             planner_llm_api_key = gr.Textbox(
                 label="API Key",
                 type="password",
-                value="",
-                info="Your API key (leave blank to use .env)"
+                value=os.getenv("ZKH_API_KEY", ""),
+                info="Your API key (已从后台配置加载默认值)"
             )
 
     with gr.Row():
@@ -208,7 +208,8 @@ def create_agent_settings_tab(webui_manager: WebuiManager):
             interactive=True,
             allow_custom_value=True,
             choices=['function_calling', 'json_mode', 'raw', 'auto', 'tools', "None"],
-            visible=True
+            visible=True,
+            info="⚠️ LM Studio/Ollama 本地模型建议使用 'json_mode' 或 'raw' 模式"
         )
     tab_components.update(dict(
         override_system_prompt=override_system_prompt,
@@ -237,7 +238,7 @@ def create_agent_settings_tab(webui_manager: WebuiManager):
     webui_manager.add_components("agent_settings", tab_components)
 
     llm_provider.change(
-        fn=lambda x: gr.update(visible=x == "ollama"),
+        fn=lambda x: gr.update(visible=x in ("ollama", "lmstudio")),
         inputs=llm_provider,
         outputs=ollama_num_ctx
     )
@@ -247,7 +248,7 @@ def create_agent_settings_tab(webui_manager: WebuiManager):
         outputs=[llm_model_name]
     )
     planner_llm_provider.change(
-        fn=lambda x: gr.update(visible=x == "ollama"),
+        fn=lambda x: gr.update(visible=x in ("ollama", "lmstudio")),
         inputs=[planner_llm_provider],
         outputs=[planner_ollama_num_ctx]
     )

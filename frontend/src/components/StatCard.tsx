@@ -1,11 +1,13 @@
 /**
  * StatCard - 统计卡片组件
+ * 科技感设计，支持趋势指示器
  */
 import { Icon } from '@iconify/react';
 
-export interface StatCardProps {
+interface StatCardProps {
   title: string;
-  value: number | string;
+  value: string | number;
+  suffix?: string;
   icon: string;
   iconColor?: string;
   iconBg?: string;
@@ -13,47 +15,107 @@ export interface StatCardProps {
     value: number;
     isUp: boolean;
   };
-  suffix?: string;
+  description?: string;
+  loading?: boolean;
+  className?: string;
 }
 
 export function StatCard({
   title,
   value,
-  icon,
-  iconColor = '#676BEF',
-  iconBg = '#E6E9FD',
-  trend,
   suffix,
+  icon,
+  iconColor = '#6366f1',
+  iconBg = 'rgba(99, 102, 241, 0.1)',
+  trend,
+  description,
+  loading = false,
+  className = '',
 }: StatCardProps) {
-  return (
-    <div className="bg-white rounded-[8px] p-6 card-shadow hover:shadow-lg transition-shadow duration-300">
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <div className="text-[14px] text-[#9297A9] mb-2">{title}</div>
-          <div className="flex items-baseline">
-            <span className="text-[28px] font-bold text-[#333]">{value}</span>
-            {suffix && <span className="text-[14px] text-[#666] ml-1">{suffix}</span>}
-          </div>
-          {trend && (
-            <div className={`flex items-center mt-2 text-[12px] ${trend.isUp ? 'text-[#52c41a]' : 'text-[#F35859]'}`}>
-              <Icon 
-                icon={trend.isUp ? 'mdi:arrow-up' : 'mdi:arrow-down'} 
-                className="mr-1"
-              />
-              <span>{trend.value}%</span>
-              <span className="text-[#999] ml-1">较上周</span>
-            </div>
-          )}
-        </div>
-        <div 
-          className="w-[48px] h-[48px] rounded-[12px] flex items-center justify-center"
-          style={{ backgroundColor: iconBg }}
-        >
-          <Icon icon={icon} className="text-[24px]" style={{ color: iconColor }} />
+  if (loading) {
+    return (
+      <div 
+        className={`rounded-2xl p-6 ${className}`}
+        style={{
+          background: 'rgba(30, 41, 59, 0.6)',
+          border: '1px solid rgba(99, 102, 241, 0.1)',
+          backdropFilter: 'blur(12px)',
+        }}
+      >
+        <div className="animate-pulse">
+          <div className="h-4 bg-slate-700 rounded w-1/3 mb-4" />
+          <div className="h-8 bg-slate-700 rounded w-2/3" />
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div 
+      className={`rounded-2xl p-6 transition-all duration-300 hover:translate-y-[-2px] group ${className}`}
+      style={{
+        background: 'rgba(30, 41, 59, 0.6)',
+        border: '1px solid rgba(99, 102, 241, 0.1)',
+        backdropFilter: 'blur(12px)',
+      }}
+    >
+      {/* 顶部：图标和标题 */}
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <p className="text-sm text-slate-400 font-medium mb-1">{title}</p>
+          <div className="flex items-baseline gap-1">
+            <span className="text-2xl font-bold text-white">{value}</span>
+            {suffix && (
+              <span className="text-sm text-slate-400">{suffix}</span>
+            )}
+          </div>
+        </div>
+        <div 
+          className="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 group-hover:scale-110"
+          style={{ 
+            background: iconBg,
+            boxShadow: `0 0 20px ${iconBg}`,
+          }}
+        >
+          <Icon 
+            icon={icon} 
+            className="text-2xl"
+            style={{ color: iconColor }}
+          />
+        </div>
+      </div>
+
+      {/* 底部：趋势和描述 */}
+      <div className="flex items-center gap-3">
+        {trend && (
+          <div 
+            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium"
+            style={{
+              background: trend.isUp 
+                ? 'rgba(16, 185, 129, 0.1)' 
+                : 'rgba(239, 68, 68, 0.1)',
+              color: trend.isUp ? '#10b981' : '#ef4444',
+            }}
+          >
+            <Icon 
+              icon={trend.isUp ? 'mdi:trending-up' : 'mdi:trending-down'} 
+              className="text-sm"
+            />
+            <span>{trend.value}%</span>
+          </div>
+        )}
+        {description && (
+          <p className="text-xs text-slate-500">{description}</p>
+        )}
+      </div>
+
+      {/* 装饰性光效 */}
+      <div 
+        className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+        style={{
+          background: `radial-gradient(circle at top right, ${iconColor}10, transparent 50%)`,
+        }}
+      />
     </div>
   );
 }
-
-export default StatCard;

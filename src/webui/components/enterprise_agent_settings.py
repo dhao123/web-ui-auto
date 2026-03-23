@@ -132,6 +132,7 @@ def create_enterprise_agent_settings(ui_manager: WebuiManager, lang: Literal["zh
                     with gr.Column(scale=1):
                         llm_base_url = gr.Textbox(
                             label=t["base_url"],
+                            value=os.getenv("ZKH_ENDPOINT", "https://ai-dev-gateway.zkh360.com/llm/v1"),
                             placeholder="https://api.openai.com/v1",
                             elem_classes=["ep-input"]
                         )
@@ -139,6 +140,7 @@ def create_enterprise_agent_settings(ui_manager: WebuiManager, lang: Literal["zh
                         llm_api_key = gr.Textbox(
                             label=t["api_key"],
                             type="password",
+                            value=os.getenv("ZKH_API_KEY", ""),
                             placeholder="••••••••",
                             elem_classes=["ep-input"]
                         )
@@ -196,12 +198,14 @@ def create_enterprise_agent_settings(ui_manager: WebuiManager, lang: Literal["zh
                     with gr.Column(scale=1):
                         planner_llm_base_url = gr.Textbox(
                             label=t["base_url"],
+                            value=os.getenv("ZKH_ENDPOINT", "https://ai-dev-gateway.zkh360.com/llm/v1"),
                             elem_classes=["ep-input"]
                         )
                     with gr.Column(scale=1):
                         planner_llm_api_key = gr.Textbox(
                             label=t["api_key"],
                             type="password",
+                            value=os.getenv("ZKH_API_KEY", ""),
                             elem_classes=["ep-input"]
                         )
                 

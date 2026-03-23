@@ -19,6 +19,7 @@ from gradio.components import Component
 from langchain_core.language_models.chat_models import BaseChatModel
 
 from src.agent.browser_use.browser_use_agent import BrowserUseAgent
+from src.agent.browser_use.lmstudio_agent import LMStudioAgent
 from src.browser.custom_browser import CustomBrowser
 from src.controller.custom_controller import CustomController
 from src.utils import llm_provider
@@ -26,6 +27,68 @@ from src.utils.token_tracking_llm import TokenTrackingLLM
 from src.webui.webui_manager import WebuiManager
 
 logger = logging.getLogger(__name__)
+
+# 全局 Token 缓冲区，用于在 execution_monitor 创建之前临时存储 Token
+_pending_tokens = {"prompt_tokens": 0, "completion_tokens": 0}
+# 全局 webui_manager 引用，用于在回调中访问
+_webui_manager_ref = None
+
+
+def _set_webui_manager_ref(webui_manager: WebuiManager):
+    """设置全局 webui_manager 引用"""
+    global _webui_manager_ref
+    _webui_manager_ref = webui_manager
+
+
+def _record_token_usage(prompt_tokens: int, completion_tokens: int):
+    """
+    记录 Token 使用到 execution_monitor 或临时缓冲区
+    这个函数确保即使在 execution_monitor 创建之前的 Token 也能被统计
+    """
+    global _pending_tokens, _webui_manager_ref
+    
+    # 尝试记录到 execution_monitor
+    if _webui_manager_ref and hasattr(_webui_manager_ref, 'bu_agent') and _webui_manager_ref.bu_agent:
+        agent = _webui_manager_ref.bu_agent
+        if hasattr(agent, 'execution_monitor') and agent.execution_monitor:
+            # 先导入之前暂存的 Token
+            if _pending_tokens["prompt_tokens"] > 0 or _pending_tokens["completion_tokens"] > 0:
+                agent.execution_monitor.record_tokens(
+                    prompt_tokens=_pending_tokens["prompt_tokens"],
+                    completion_tokens=_pending_tokens["completion_tokens"]
+                )
+                logger.debug(f"Imported pending tokens: prompt={_pending_tokens['prompt_tokens']}, "
+                           f"completion={_pending_tokens['completion_tokens']}")
+                _pending_tokens = {"prompt_tokens": 0, "completion_tokens": 0}
+            
+            # 记录当前 Token
+            agent.execution_monitor.record_tokens(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens
+            )
+            logger.debug(f"Real-time token recorded: prompt={prompt_tokens}, completion={completion_tokens}")
+            return True
+    
+    # 如果 execution_monitor 不存在，暂存到缓冲区
+    _pending_tokens["prompt_tokens"] += prompt_tokens
+    _pending_tokens["completion_tokens"] += completion_tokens
+    logger.debug(f"Token buffered (monitor not ready): prompt={prompt_tokens}, completion={completion_tokens}, "
+                f"total_pending: prompt={_pending_tokens['prompt_tokens']}, completion={_pending_tokens['completion_tokens']}")
+    return False
+
+
+def _import_pending_tokens_to_monitor(monitor):
+    """将暂存的 Token 导入到 execution_monitor"""
+    global _pending_tokens
+    if _pending_tokens["prompt_tokens"] > 0 or _pending_tokens["completion_tokens"] > 0:
+        monitor.record_tokens(
+            prompt_tokens=_pending_tokens["prompt_tokens"],
+            completion_tokens=_pending_tokens["completion_tokens"]
+        )
+        logger.info(f"Imported pending tokens to monitor: "
+                   f"prompt={_pending_tokens['prompt_tokens']}, "
+                   f"completion={_pending_tokens['completion_tokens']}")
+        _pending_tokens = {"prompt_tokens": 0, "completion_tokens": 0}
 
 
 # --- Helper Functions --- (Defined at module level)
@@ -293,6 +356,9 @@ async def run_agent_task(
 ) -> AsyncGenerator[Dict[gr.components.Component, Any], None]:
     """Handles the entire lifecycle of initializing and running the agent."""
 
+    # 设置全局 webui_manager 引用，供 Token 回调使用
+    _set_webui_manager_ref(webui_manager)
+
     # --- Get Components ---
     # Need handles to specific UI components to update them
     user_input_comp = webui_manager.get_component_by_id("browser_use_agent.user_input")
@@ -382,7 +448,7 @@ async def run_agent_task(
         planner_llm_api_key = get_setting("planner_llm_api_key") or None
         planner_use_vision = get_setting("planner_use_vision", False)
 
-        planner_llm = await _initialize_llm(
+        _planner_llm = await _initialize_llm(
             planner_llm_provider_name,
             planner_llm_model_name,
             planner_llm_temperature,
@@ -390,6 +456,8 @@ async def run_agent_task(
             planner_llm_api_key,
             planner_ollama_num_ctx if planner_llm_provider_name == "ollama" else None,
         )
+        # 使用相同的回调函数包装 planner_llm，确保 Token 被统计
+        planner_llm = TokenTrackingLLM(llm=_planner_llm, token_callback=token_usage_callback)
 
     # --- Browser Settings ---
     def get_browser_setting(key, default=None):
@@ -440,14 +508,7 @@ async def run_agent_task(
     # 定义token回调函数，用于实时更新ExecutionMonitor
     def token_usage_callback(prompt_tokens: int, completion_tokens: int):
         """Token使用回调函数"""
-        if hasattr(webui_manager, 'bu_agent') and webui_manager.bu_agent:
-            agent = webui_manager.bu_agent
-            if hasattr(agent, 'execution_monitor') and agent.execution_monitor:
-                agent.execution_monitor.record_tokens(
-                    prompt_tokens=prompt_tokens,
-                    completion_tokens=completion_tokens
-                )
-                logger.debug(f"Real-time token recorded: prompt={prompt_tokens}, completion={completion_tokens}")
+        _record_token_usage(prompt_tokens, completion_tokens)
     
     # 使用TokenTrackingLLM包装原始LLM
     main_llm = TokenTrackingLLM(llm=base_llm, token_callback=token_usage_callback)
@@ -558,7 +619,22 @@ async def run_agent_task(
                 raise ValueError(
                     "Browser or Context not initialized, cannot create agent."
                 )
-            webui_manager.bu_agent = BrowserUseAgent(
+            
+            # 检测是否为 LM Studio 本地模型，使用专用 Agent
+            is_lmstudio = llm_provider_name == "lmstudio" or (
+                llm_base_url and ':1234' in str(llm_base_url)
+            )
+            
+            if is_lmstudio:
+                logger.info(f"🤖 Using LMStudioAgent for local model: {llm_model_name}")
+                # 本地模型强制使用 raw 模式
+                tool_calling_method = "raw"
+                agent_class = LMStudioAgent
+            else:
+                logger.info(f"🤖 Using BrowserUseAgent for API model: {llm_model_name}")
+                agent_class = BrowserUseAgent
+            
+            webui_manager.bu_agent = agent_class(
                 task=task,
                 llm=main_llm,
                 browser=webui_manager.bu_browser,
@@ -696,6 +772,9 @@ async def run_agent_task(
             if webui_manager.bu_agent and hasattr(webui_manager.bu_agent, 'execution_monitor'):
                 monitor = webui_manager.bu_agent.execution_monitor
                 if monitor:
+                    # 导入暂存的 Token（如果有）
+                    _import_pending_tokens_to_monitor(monitor)
+                    
                     # 执行统计卡片
                     execution_text = f"""
 **状态**: {monitor.status.value}
@@ -776,6 +855,36 @@ async def run_agent_task(
 
             logger.info(f"Explicitly saving agent history to: {history_file}")
             webui_manager.bu_agent.save_history(history_file)
+
+            # 同步 ExecutionMonitor 的 Token 数据到历史文件
+            if webui_manager.bu_agent and hasattr(webui_manager.bu_agent, 'execution_monitor'):
+                monitor = webui_manager.bu_agent.execution_monitor
+                if monitor and os.path.exists(history_file):
+                    try:
+                        # 导入暂存的 Token（如果有）
+                        _import_pending_tokens_to_monitor(monitor)
+                        
+                        with open(history_file, 'r', encoding='utf-8') as f:
+                            history_data = json.load(f)
+                        
+                        # 添加/覆盖 token_usage 字段（ExecutionMonitor 的准确统计）
+                        history_data['token_usage'] = {
+                            'total_prompt_tokens': monitor.token_usage.prompt_tokens,
+                            'total_completion_tokens': monitor.token_usage.completion_tokens,
+                            'total_tokens': monitor.token_usage.total_tokens
+                        }
+                        
+                        # 同时更新 total_input_tokens 以保持一致性
+                        history_data['total_input_tokens'] = monitor.token_usage.prompt_tokens
+                        history_data['total_output_tokens'] = monitor.token_usage.completion_tokens
+                        
+                        with open(history_file, 'w', encoding='utf-8') as f:
+                            json.dump(history_data, f, ensure_ascii=False, indent=2)
+                        
+                        logger.info(f"Token usage synchronized: prompt={monitor.token_usage.prompt_tokens}, "
+                                   f"completion={monitor.token_usage.completion_tokens}")
+                    except Exception as e:
+                        logger.error(f"Failed to synchronize token usage: {e}")
 
             if os.path.exists(history_file):
                 final_update[history_file_comp] = gr.File(value=history_file)

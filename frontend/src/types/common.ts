@@ -1,32 +1,29 @@
 /**
- * 通用类型定义
+ * Common Types - 通用类型定义
  */
 
-// 菜单项类型
+// =============================================================================
+// Menu Types
+// =============================================================================
+
 export interface MenuItem {
   name: string;
-  link?: string;
-  icon?: string;
-  children?: MenuItem[];
+  icon: string;
+  link: string;
 }
 
-// 菜单分组类型
 export interface MenuGroup {
   name: string;
+  icon?: string;
   children: MenuItem[];
 }
 
-// 用户信息类型
-export interface UserInfo {
-  username: string;
-  nickname?: string;
-  avatar?: string;
-}
+// =============================================================================
+// Task Types
+// =============================================================================
 
-// 任务状态
 export type TaskStatus = 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
 
-// 任务数据
 export interface Task {
   id: string;
   name: string;
@@ -39,8 +36,7 @@ export interface Task {
   error?: string;
 }
 
-// 统计数据
-export interface Statistics {
+export interface TaskStatistics {
   totalTasks: number;
   completedTasks: number;
   failedTasks: number;
@@ -49,26 +45,26 @@ export interface Statistics {
   successRate: number;
 }
 
-// Token使用趋势
 export interface TokenTrend {
   date: string;
   tokens: number;
 }
 
-// 任务分析数据
+export interface DurationDistribution {
+  range: string;
+  count: number;
+}
+
 export interface TaskAnalysis {
   successCount: number;
   failedCount: number;
-  durationDistribution: {
-    range: string;
-    count: number;
-  }[];
+  durationDistribution: DurationDistribution[];
 }
 
-// Tool Calling方法类型
-export type ToolCallingMethod = 'auto' | 'function_call' | 'raw' | 'json_mode' | 'tools';
+// =============================================================================
+// Agent Types
+// =============================================================================
 
-// Agent配置
 export interface AgentConfig {
   agentType: string;
   maxSteps: number;
@@ -76,10 +72,11 @@ export interface AgentConfig {
   maxActionsPerStep: number;
   toolCallInContent: boolean;
   maxInputTokens: number;
-  toolCallingMethod: ToolCallingMethod;
+  toolCallingMethod: string;
+  overrideSystemPrompt?: string;
+  extendSystemPrompt?: string;
 }
 
-// Browser配置
 export interface BrowserConfig {
   headless: boolean;
   disableSecurity: boolean;
@@ -87,50 +84,124 @@ export interface BrowserConfig {
   windowHeight: number;
   saveRecordingPath?: string;
   saveTracePath?: string;
+  useOwnBrowser: boolean;
+  keepBrowserOpen: boolean;
+  browserBinaryPath?: string;
+  browserUserDataDir?: string;
+  cdpUrl?: string;
+  wssUrl?: string;
 }
 
-// LLM配置
 export interface LLMConfig {
   provider: string;
   modelName: string;
   temperature: number;
   baseUrl?: string;
   apiKey?: string;
+  plannerEnabled?: boolean;
+  plannerProvider?: string;
+  plannerModelName?: string;
+  plannerTemperature?: number;
+  plannerBaseUrl?: string;
+  plannerApiKey?: string;
 }
 
-// LLM Planner配置
-export interface LLMPlannerConfig {
-  enabled: boolean;
-  provider: string;
-  modelName: string;
-  temperature: number;
-  baseUrl?: string;
-  apiKey?: string;
+// =============================================================================
+// Execution Types
+// =============================================================================
+
+export interface ExecutionMetrics {
+  status: string;
+  currentStep: number;
+  maxSteps: number;
+  totalDuration: number;
+  avgStepDuration: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  systemRetries: number;
+  businessRetries: number;
+  totalRetries: number;
 }
 
-// 完整LLM配置（包含主LLM和Planner）
-export interface FullLLMConfig {
-  main: LLMConfig;
-  planner: LLMPlannerConfig;
+export interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp?: string;
 }
 
-// 分页参数
-export interface PaginationParams {
-  page: number;
-  pageSize: number;
+export interface AgentRunState {
+  taskId: string;
+  task: string;
+  status: string;
+  currentStep: number;
+  maxSteps: number;
+  totalDuration: number;
+  avgStepDuration: number;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  systemRetries: number;
+  businessRetries: number;
+  totalRetries: number;
+  screenshot?: string;
+  chatHistory: ChatMessage[];
 }
 
-// 分页响应
-export interface PaginatedResponse<T> {
+// =============================================================================
+// API Response Types
+// =============================================================================
+
+export interface ApiResponse<T = unknown> {
+  code: number;
+  message: string;
+  data?: T;
+}
+
+export interface PaginatedData<T> {
   list: T[];
   total: number;
   page: number;
   pageSize: number;
 }
 
-// API响应
-export interface ApiResponse<T = unknown> {
-  code: number;
-  message: string;
-  data: T;
+// =============================================================================
+// Config Template Types
+// =============================================================================
+
+export interface ConfigTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  agentConfig: AgentConfig;
+  browserConfig: BrowserConfig;
+  llmConfig: LLMConfig;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// =============================================================================
+// User Types
+// =============================================================================
+
+export interface UserInfo {
+  username: string;
+  nickname: string;
+  avatar?: string;
+}
+
+// =============================================================================
+// ZKH MCP Types
+// =============================================================================
+
+export interface ZKHMCPTool {
+  name: string;
+  description: string;
+  enabled: boolean;
+}
+
+export interface ZKHConfig {
+  enabled: boolean;
+  tools: ZKHMCPTool[];
+  customSelectors?: Record<string, string>;
 }

@@ -3,6 +3,7 @@ PROVIDER_DISPLAY_NAMES = {
     "openai": "OpenAI",
     "deepseek": "DeepSeek",
     "ollama": "Ollama (本地模型)",
+    "lmstudio": "LM Studio (本地模型)",
 }
 
 # Predefined model names for common providers
@@ -18,6 +19,7 @@ model_names = {
         "ep_20250728_izkl",   # 通义千问-Max-Latest
         "ep_20250718_zoiz",   # ZKH-LLM
         "ep_20250904_slsu",   # Qwen-Long
+        "ep_20260225_3rsr",   # Qwen3.5-Plus
         # ⚠️ 不支持工具调用 - 不推荐用于 Browser-Use Agent
         # "ep_20250815_yc11", # 通义千问vl max (旧版本，工具调用不支持)
         # "ep_20250908_1pgk", # DeepSeek-V3.1 (工具调用不支持)
@@ -30,5 +32,11 @@ model_names = {
         "qwen2.5:7b", "qwen2.5:14b", "qwen2.5:32b",
         "qwen2.5-coder:14b", "qwen2.5-coder:32b",
         "llama2:7b", "deepseek-r1:14b", "deepseek-r1:32b"
+    ],
+    "lmstudio": [
+        "qwen3.5-9b", "qwen2.5-7b", "qwen2.5-14b",
+        "llama-3.2-3b", "llama-3.2-8b", "llama-3.1-8b",
+        "deepseek-coder-v2", "deepseek-r1-distill-qwen",
+        "phi-4", "gemma-2-9b"
     ],
 }

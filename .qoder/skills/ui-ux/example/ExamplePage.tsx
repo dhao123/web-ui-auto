@@ -69,7 +69,7 @@ const menuList = [
 // 示例用户
 const user = {
   username: 'developer@example.com',
-  nickname: '开发者',
+  nickname: '测试者',
 };
 
 // 示例页面

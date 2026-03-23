@@ -1,6 +1,6 @@
 # UI/UX Skill 组件库
 
-本目录包含 AI 开发者平台 UI/UX Skill 的所有自定义组件代码。
+本目录包含 AI 测试者平台 UI/UX Skill 的所有自定义组件代码。
 
 ## 📁 目录结构
 
@@ -238,7 +238,7 @@ const App = () => {
       mode="common"
       navProps={{ menuList }}
       headerProps={{ 
-        user: { username: 'user@example.com', nickname: '开发者' },
+        user: { username: 'user@example.com', nickname: '测试者' },
         isLogin: true 
       }}
     >

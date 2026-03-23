@@ -1,7 +1,11 @@
 /**
- * 页面统一导出
+ * Pages - 页面导出
  */
-export { default as Dashboard } from './Dashboard';
-export { default as AgentRun } from './AgentRun';
-export { default as Settings } from './Settings';
-export { default as TaskHistory } from './TaskHistory';
+
+export { Dashboard } from './Dashboard';
+export { AgentRun } from './AgentRun';
+export { Settings } from './Settings';
+export { TaskHistory } from './TaskHistory';
+export { DeepResearch } from './DeepResearch';
+export { ConfigTemplates } from './ConfigTemplates';
+export { ZKHConfig } from './ZKHConfig';

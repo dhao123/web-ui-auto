@@ -15,6 +15,6 @@ def main():
     demo.queue().launch(server_name=args.ip, server_port=args.port)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':  
     main()
 

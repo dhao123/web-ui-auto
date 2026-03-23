@@ -1,131 +1,89 @@
 /**
- * Header - 头部导航组件
+ * Header - 顶部导航组件
  */
+import { Avatar, Dropdown } from 'antd';
 import { Icon } from '@iconify/react';
-import { Dropdown } from 'antd';
-import { useMemo } from 'react';
-import { NavLink } from 'react-router-dom';
-import type { MenuProps } from 'antd';
-import type { UserInfo } from '@/types/common';
 
-import Logo from '@/assets/images/logo.png';
-
-export interface HeaderMenuItem {
-  icon: string;
-  link: string;
-  title: string;
-}
-
-export type HeaderMode = 'common' | 'simple';
-
-export interface HeaderProps {
-  mode?: HeaderMode;
-  user?: UserInfo;
+interface HeaderProps {
+  user?: {
+    username: string;
+    nickname: string;
+    avatar?: string;
+  };
   isLogin?: boolean;
-  headerMenu?: HeaderMenuItem[];
-  onLogout?: () => void;
-  logoUrl?: string;
-  defaultAvatarUrl?: string;
 }
 
-// 默认占位图片
-const DEFAULT_AVATAR = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzYiIGhlaWdodD0iMzYiIHZpZXdCb3g9IjAgMCAzNiAzNiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48Y2lyY2xlIGN4PSIxOCIgY3k9IjE4IiByPSIxOCIgZmlsbD0iI0UwRTBFMCIvPjxjaXJjbGUgY3g9IjE4IiBjeT0iMTQiIHI9IjYiIGZpbGw9IiM5OTkiLz48cGF0aCBkPSJNNiAzMmMwLTYuNjI3IDUuMzczLTEyIDEyLTEyczEyIDUuMzczIDEyIDEyIiBmaWxsPSIjOTk5Ii8+PC9zdmc+';
-
-export function Header({
-  mode = 'common',
-  user,
-  isLogin = false,
-  headerMenu = [
+export function Header({ user, isLogin = false }: HeaderProps) {
+  const userMenuItems = [
     {
-      icon: 'mdi:file-document-outline',
-      link: '#',
-      title: '文档',
+      key: 'profile',
+      icon: <Icon icon="mdi:account" />,
+      label: '个人资料',
     },
-  ],
-  onLogout,
-  logoUrl,
-  defaultAvatarUrl = DEFAULT_AVATAR,
-}: HeaderProps) {
-  // 用户菜单项
-  const dropdownItems: MenuProps['items'] = useMemo(() => {
-    return [
-      {
-        key: '1',
-        label: (
-          <a
-            onClick={() => {
-              if (isLogin && onLogout) {
-                onLogout();
-              }
-            }}
-            rel="noopener noreferrer">
-            {isLogin ? '登出' : '登录'}
-          </a>
-        ),
-      },
-    ];
-  }, [isLogin, onLogout]);
+    {
+      key: 'settings',
+      icon: <Icon icon="mdi:cog" />,
+      label: '系统设置',
+    },
+    {
+      type: 'divider' as const,
+    },
+    {
+      key: 'logout',
+      icon: <Icon icon="mdi:logout" />,
+      label: '退出登录',
+      danger: true,
+    },
+  ];
 
   return (
-    <header className="h-[90px] px-[40px] flex flex-row items-center justify-between">
-      {/* 左侧：Logo */}
-      <div>
-        {mode === 'simple' && (
-          <NavLink className="h-[75px] flex items-center" to="/">
-            <img alt="Logo" src={logoUrl || Logo} className="h-[40px]" />
-          </NavLink>
-        )}
-        {mode === 'common' && (
-          <div className="text-[20px] font-bold text-[#333]">
-            AI Browser Automation
-          </div>
-        )}
+    <header 
+      className="h-16 px-6 flex items-center justify-between"
+      style={{
+        background: 'rgba(15, 23, 42, 0.8)',
+        backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid rgba(99, 102, 241, 0.1)',
+      }}
+    >
+      {/* 左侧 - 面包屑/标题 */}
+      <div className="flex items-center gap-4">
+        <h2 className="text-lg font-semibold text-white">AI Browser Automation</h2>
       </div>
 
-      {/* 右侧：导航菜单 + 用户信息 */}
-      <div className="flex-1 flex items-center justify-end">
-        {/* 导航菜单 */}
-        <div className="flex text-[14px] text-[#5F626D]">
-          {headerMenu.map((item) => {
-            return (
-              <a
-                className="mr-[40px] flex items-center hover:text-[#676BEF]"
-                href={item.link}
-                key={item.title}
-                target="_blank"
-                rel="noopener noreferrer">
-                <Icon className="text-[16px]" icon={item.icon} />
-                <span className="ml-[8px]">{item.title}</span>
-              </a>
-            );
-          })}
-        </div>
+      {/* 右侧 - 操作区 */}
+      <div className="flex items-center gap-4">
+        {/* 通知 */}
+        <button className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-white/5 relative">
+          <Icon icon="mdi:bell-outline" className="text-xl text-slate-400" />
+          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+        </button>
 
-        {/* 用户信息 */}
-        {user && (
-          <>
-            <div className="text-right mr-[15px]">
-              <div className="text-[#333333] text-[14px] font-bold">
-                {user.nickname || user.username}
-              </div>
-              <div className="text-[#666666] text-[12px] mt-[5px] font-normal">
-                {user.username}
-              </div>
-            </div>
+        {/* 帮助 */}
+        <button className="w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-300 hover:bg-white/5">
+          <Icon icon="mdi:help-circle-outline" className="text-xl text-slate-400" />
+        </button>
 
-            {/* 用户头像下拉菜单 */}
-            <Dropdown menu={{ items: dropdownItems }} placement="bottomRight">
-              <img
-                alt="User Avatar"
-                className="w-[36px] h-[36px] cursor-pointer rounded-full"
-                src={user.avatar || defaultAvatarUrl}
+        {/* 用户菜单 */}
+        {isLogin && user && (
+          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
+            <div className="flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer transition-all duration-300 hover:bg-white/5">
+              <Avatar 
+                size={36}
+                src={user.avatar}
+                icon={!user.avatar && <Icon icon="mdi:account" />}
+                style={{ 
+                  background: 'linear-gradient(135deg, #6366f1 0%, #a855f7 100%)',
+                }}
               />
-            </Dropdown>
-          </>
+              <div className="hidden md:block">
+                <p className="text-sm font-medium text-white leading-tight">{user.nickname}</p>
+                <p className="text-xs text-slate-400">{user.username}</p>
+              </div>
+              <Icon icon="mdi:chevron-down" className="text-slate-400" />
+            </div>
+          </Dropdown>
         )}
       </div>
     </header>
   );
 }
-
-export default Header;
